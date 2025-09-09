@@ -3,6 +3,7 @@ FastAPI application entry point for SimpleIQ Backend
 """
 
 from contextlib import asynccontextmanager
+from datetime import datetime
 from typing import Any, AsyncGenerator
 
 from fastapi import FastAPI
@@ -95,4 +96,5 @@ async def health_check() -> dict[str, Any]:
         "status": "healthy",
         "version": settings.APP_VERSION,
         "environment": settings.ENVIRONMENT,
+        "timestamp": datetime.utcnow().isoformat(),
     }

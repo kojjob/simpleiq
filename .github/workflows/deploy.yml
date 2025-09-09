@@ -1,0 +1,126 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  deploy-staging:
+    if: github.ref == 'refs/heads/develop' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
+    runs-on: ubuntu-latest
+    environment: staging
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Deploy Backend to ECS
+      run: |
+        aws ecs update-service \
+          --cluster simpleiq-staging \
+          --service backend-service \
+          --force-new-deployment \
+          --region us-east-1
+
+    - name: Deploy Frontend to S3/CloudFront
+      run: |
+        aws s3 sync frontend/dist/ s3://simpleiq-staging-frontend --delete
+        aws cloudfront create-invalidation \
+          --distribution-id ${{ secrets.STAGING_CLOUDFRONT_ID }} \
+          --paths "/*"
+
+    - name: Run smoke tests
+      run: |
+        npm install -g newman
+        newman run tests/postman/smoke-tests.json \
+          --environment tests/postman/staging-env.json
+
+    - name: Notify Slack
+      uses: 8398a7/action-slack@v3
+      if: always()
+      with:
+        status: ${{ job.status }}
+        text: 'Staging deployment ${{ job.status }}'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+
+  deploy-production:
+    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Deploy Backend to ECS (Blue/Green)
+      run: |
+        aws deploy create-deployment \
+          --application-name simpleiq-backend \
+          --deployment-group-name production \
+          --deployment-config-name CodeDeployDefault.ECSAllAtOnceBlueGreen \
+          --description "Production deployment from GitHub Actions"
+
+    - name: Deploy Frontend to S3/CloudFront
+      run: |
+        aws s3 sync frontend/dist/ s3://simpleiq-production-frontend --delete
+        aws cloudfront create-invalidation \
+          --distribution-id ${{ secrets.PROD_CLOUDFRONT_ID }} \
+          --paths "/*"
+
+    - name: Run smoke tests
+      run: |
+        npm install -g newman
+        newman run tests/postman/smoke-tests.json \
+          --environment tests/postman/production-env.json
+
+    - name: Monitor deployment
+      run: |
+        echo "Monitoring deployment health..."
+        sleep 60
+        curl -f https://api.simpleiq.io/health || exit 1
+
+    - name: Rollback on failure
+      if: failure()
+      run: |
+        aws deploy stop-deployment \
+          --deployment-id ${{ steps.deploy.outputs.deployment-id }} \
+          --auto-rollback-enabled
+
+    - name: Notify Slack
+      uses: 8398a7/action-slack@v3
+      if: always()
+      with:
+        status: ${{ job.status }}
+        text: 'Production deployment ${{ job.status }}'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        fields: repo,message,commit,author,action,eventName,ref,workflow
