@@ -29,7 +29,12 @@ class Settings(BaseSettings):
     # API
     API_V1_PREFIX: str = "/api/v1"
     PROJECT_NAME: str = "SimpleIQ API"
-    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
+    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = [
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000",
+    ]
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
@@ -130,9 +135,6 @@ class Settings(BaseSettings):
     ENABLE_SIGNUP: bool = True
     ENABLE_AI_FEATURES: bool = True
     ENABLE_PREMIUM_FEATURES: bool = False
-
-    class Config:
-        case_sensitive = True
 
 
 # Create settings instance
