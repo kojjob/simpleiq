@@ -118,7 +118,11 @@ class DataProcessingService:
     async def _get_connector(self, data_source: DataSource) -> BaseConnector | None:
         """Get appropriate connector for data source type"""
         if data_source.type == DataSourceType.csv:
+            from app.connectors.csv_connector import CSVConnector
             return CSVConnector(data_source, self.db_session)
+        elif data_source.type == DataSourceType.google_sheets:
+            from app.connectors.google_sheets_connector import GoogleSheetsConnector
+            return GoogleSheetsConnector(data_source, self.db_session)
         
         # Add other connectors here as implemented
         return None
