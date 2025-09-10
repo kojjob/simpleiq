@@ -55,6 +55,10 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 
+# Alias for consistency with imports
+get_async_db = get_db
+
+
 async def create_db_tables() -> None:
     """
     Create all database tables

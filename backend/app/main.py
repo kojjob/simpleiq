@@ -14,7 +14,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 # Import models to register them with SQLAlchemy
 import app.models
-from app.api.v1 import auth, dashboards, data, data_sources, queries
+from app.api.v1 import auth, dashboards, data, data_processing, data_sources, queries
 from app.core.config import settings
 from app.core.database import create_db_tables
 
@@ -82,6 +82,11 @@ app.include_router(
     data_sources.router,
     prefix=f"{settings.API_V1_PREFIX}/data-sources",
     tags=["data-sources"],
+)
+app.include_router(
+    data_processing.router,
+    prefix=f"{settings.API_V1_PREFIX}",
+    tags=["data-processing"],
 )
 
 
