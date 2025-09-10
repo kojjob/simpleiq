@@ -20,9 +20,13 @@ import {
   Tabs,
   Alert,
   Progress,
-  Drawer
+  Drawer,
+  Dropdown,
+  Menu
 } from 'antd';
 import dataSourcesService, { DataSource, DataSourceCreate } from '../services/dataSourcesService';
+import googleOAuthService from '../services/googleOAuthService';
+import GoogleSheetsModal from '../components/GoogleSheetsModal';
 import {
   DatabaseOutlined,
   PlusOutlined,
@@ -55,6 +59,7 @@ const DataSources: React.FC = () => {
   const [testingConnection, setTestingConnection] = useState<string | null>(null);
   const [selectedSource, setSelectedSource] = useState<DataSource | null>(null);
   const [drawerVisible, setDrawerVisible] = useState(false);
+  const [googleSheetsModalVisible, setGoogleSheetsModalVisible] = useState(false);
   const [form] = Form.useForm();
 
   // Load data sources from API
@@ -90,6 +95,17 @@ const DataSources: React.FC = () => {
     setIsModalVisible(true);
   };
 
+  const handleAddGoogleSheets = () => {
+    setGoogleSheetsModalVisible(true);
+  };
+
+  const handleGoogleSheetsSuccess = async (dataSource: any, userInfo: any) => {
+    setGoogleSheetsModalVisible(false);
+    // Reload data sources to show the new connection
+    await loadDataSources();
+    message.success(`Google Sheets connected successfully! Welcome ${userInfo?.name}`);
+  };
+
   const handleEditDataSource = (source: DataSource) => {
     setEditingSource(source);
     form.setFieldsValue(source);
@@ -120,7 +136,14 @@ const DataSources: React.FC = () => {
         )
       );
 
-      const result = await dataSourcesService.testConnection(source.id);
+      let result;
+      
+      // Use Google Sheets specific test connection for Google Sheets sources
+      if (source.type === 'google_sheets') {
+        result = await googleOAuthService.testSheetsConnection(source.id);
+      } else {
+        result = await dataSourcesService.testConnection(source.id);
+      }
       
       // Update status and metadata based on test result
       setDataSources(prev => 
@@ -130,7 +153,7 @@ const DataSources: React.FC = () => {
                 ...ds, 
                 status: result.success ? 'connected' : 'error',
                 last_connected: new Date().toISOString(),
-                tables_count: result.tables_count || ds.tables_count,
+                tables_count: result.sheet_info?.rows || result.tables_count || ds.tables_count,
                 size: result.size || ds.size,
                 tables: result.tables || ds.tables
               }
@@ -389,7 +412,6 @@ const DataSources: React.FC = () => {
           </>
         );
       case 'rest_api':
-      case 'google_sheets':
       case 'csv':
         return (
           <Form.Item
@@ -399,6 +421,28 @@ const DataSources: React.FC = () => {
           >
             <Input placeholder="https://api.example.com or /path/to/file.csv" />
           </Form.Item>
+        );
+      case 'google_sheets':
+        return (
+          <Alert
+            message="Google Sheets Connection"
+            description="Google Sheets connections require OAuth authentication. Please use the 'Google Sheets' option from the Add Data Source dropdown to set up this connection."
+            type="info"
+            showIcon
+            action={
+              <Button
+                size="small"
+                type="primary"
+                icon={<GoogleOutlined />}
+                onClick={() => {
+                  setIsModalVisible(false);
+                  setGoogleSheetsModalVisible(true);
+                }}
+              >
+                Use Google Sheets Flow
+              </Button>
+            }
+          />
         );
       case 'bigquery':
       case 'snowflake':
@@ -478,13 +522,35 @@ const DataSources: React.FC = () => {
           </Space>
         }
         extra={
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleAddDataSource}
-          >
-            Add Data Source
-          </Button>
+          <Space>
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: 'google-sheets',
+                    label: 'Google Sheets',
+                    icon: <GoogleOutlined style={{ color: '#34A853' }} />,
+                    onClick: handleAddGoogleSheets
+                  },
+                  {
+                    key: 'divider',
+                    type: 'divider'
+                  },
+                  {
+                    key: 'other',
+                    label: 'Other Data Sources',
+                    icon: <DatabaseOutlined />,
+                    onClick: handleAddDataSource
+                  }
+                ]
+              }}
+              placement="bottomRight"
+            >
+              <Button type="primary" icon={<PlusOutlined />}>
+                Add Data Source
+              </Button>
+            </Dropdown>
+          </Space>
         }
       >
         <Table
@@ -613,6 +679,13 @@ const DataSources: React.FC = () => {
           </div>
         )}
       </Drawer>
+
+      {/* Google Sheets OAuth Modal */}
+      <GoogleSheetsModal
+        visible={googleSheetsModalVisible}
+        onCancel={() => setGoogleSheetsModalVisible(false)}
+        onSuccess={handleGoogleSheetsSuccess}
+      />
     </div>
   );
 };
