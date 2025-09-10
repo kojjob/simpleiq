@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
-from app.api.v1 import auth, data, queries, dashboards
+from app.api.v1 import auth, data, queries, dashboards, data_sources
 from app.core.config import settings
 from app.core.database import create_db_tables
 
@@ -74,6 +74,11 @@ app.include_router(
     dashboards.router,
     prefix=f"{settings.API_V1_PREFIX}/dashboards",
     tags=["dashboards"],
+)
+app.include_router(
+    data_sources.router,
+    prefix=f"{settings.API_V1_PREFIX}/data-sources",
+    tags=["data-sources"],
 )
 
 

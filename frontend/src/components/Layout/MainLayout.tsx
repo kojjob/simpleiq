@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Layout, Menu, Avatar, Dropdown, Space, Button } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Layout, Menu, Avatar, Dropdown, Space, Button, Spin } from 'antd';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '@/stores/authStore';
 import {
   DashboardOutlined,
   DatabaseOutlined,
@@ -18,6 +19,28 @@ const MainLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { isAuthenticated, user, logout } = useAuthStore();
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+    }
+  }, [isAuthenticated, navigate]);
+
+  // Show loading spinner if not authenticated (while redirecting)
+  if (!isAuthenticated) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh' 
+      }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   const menuItems = [
     {
@@ -65,7 +88,7 @@ const MainLayout: React.FC = () => {
 
   const handleUserMenuClick = ({ key }: { key: string }) => {
     if (key === 'logout') {
-      // Handle logout
+      logout();
       navigate('/login');
     } else if (key === 'profile') {
       navigate('/profile');
@@ -137,7 +160,7 @@ const MainLayout: React.FC = () => {
             >
               <Space style={{ cursor: 'pointer' }}>
                 <Avatar icon={<UserOutlined />} />
-                <span>User</span>
+                <span>{user?.full_name || 'User'}</span>
               </Space>
             </Dropdown>
           </Space>

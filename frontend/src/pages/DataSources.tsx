@@ -1,320 +1,618 @@
-import React, { useState } from 'react';
-import { Card, Button, Row, Col, Typography, Space, Tag, Modal, Form, Input, Select, Upload, message } from 'antd';
+import React, { useState, useEffect } from 'react';
 import {
-  PlusOutlined,
+  Card,
+  Button,
+  Table,
+  Modal,
+  Form,
+  Input,
+  Select,
+  Space,
+  Tag,
+  Tooltip,
+  message,
+  Popconfirm,
+  Row,
+  Col,
+  Statistic,
+  Badge,
+  Typography,
+  Tabs,
+  Alert,
+  Progress,
+  Drawer
+} from 'antd';
+import dataSourcesService, { DataSource, DataSourceCreate } from '../services/dataSourcesService';
+import {
   DatabaseOutlined,
-  CloudOutlined,
-  FileTextOutlined,
-  ApiOutlined,
-  GoogleOutlined,
-  UploadOutlined,
-  SyncOutlined,
-  SettingOutlined,
+  PlusOutlined,
+  EditOutlined,
   DeleteOutlined,
   CheckCircleOutlined,
-  ClockCircleOutlined,
+  CloseCircleOutlined,
+  ReloadOutlined,
+  ApiOutlined,
+  FileTextOutlined,
+  CloudOutlined,
+  GoogleOutlined,
+  SyncOutlined,
+  SettingOutlined,
   ExclamationCircleOutlined,
+  ClockCircleOutlined,
+  EyeOutlined,
+  TableOutlined
 } from '@ant-design/icons';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
+const { TabPane } = Tabs;
+const { TextArea } = Input;
 
 const DataSources: React.FC = () => {
+  const [dataSources, setDataSources] = useState<DataSource[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [editingSource, setEditingSource] = useState<DataSource | null>(null);
+  const [testingConnection, setTestingConnection] = useState<string | null>(null);
+  const [selectedSource, setSelectedSource] = useState<DataSource | null>(null);
+  const [drawerVisible, setDrawerVisible] = useState(false);
   const [form] = Form.useForm();
 
-  const dataSources = [
-    {
-      id: 1,
-      name: 'PostgreSQL - Production',
-      type: 'PostgreSQL',
-      icon: <DatabaseOutlined />,
-      status: 'connected',
-      lastSync: '5 minutes ago',
-      records: '1.2M records',
-      color: '#1890ff',
-    },
-    {
-      id: 2,
-      name: 'Google Sheets - Sales Data',
-      type: 'Google Sheets',
-      icon: <GoogleOutlined />,
-      status: 'connected',
-      lastSync: '1 hour ago',
-      records: '45K records',
-      color: '#34a853',
-    },
-    {
-      id: 3,
-      name: 'Customer Data Upload',
-      type: 'CSV Upload',
-      icon: <FileTextOutlined />,
-      status: 'syncing',
-      lastSync: 'In progress',
-      records: '12K records',
-      color: '#fa8c16',
-    },
-    {
-      id: 4,
-      name: 'Shopify Store',
-      type: 'REST API',
-      icon: <ApiOutlined />,
-      status: 'error',
-      lastSync: 'Failed 2 hours ago',
-      records: '89K records',
-      color: '#f5222d',
-    },
-  ];
-
-  const connectorTypes = [
-    { type: 'PostgreSQL', icon: <DatabaseOutlined />, category: 'Database' },
-    { type: 'MySQL', icon: <DatabaseOutlined />, category: 'Database' },
-    { type: 'MongoDB', icon: <DatabaseOutlined />, category: 'Database' },
-    { type: 'Google Sheets', icon: <GoogleOutlined />, category: 'Cloud Storage' },
-    { type: 'Google Drive', icon: <GoogleOutlined />, category: 'Cloud Storage' },
-    { type: 'Dropbox', icon: <CloudOutlined />, category: 'Cloud Storage' },
-    { type: 'CSV Upload', icon: <UploadOutlined />, category: 'File Upload' },
-    { type: 'Excel Upload', icon: <FileTextOutlined />, category: 'File Upload' },
-    { type: 'REST API', icon: <ApiOutlined />, category: 'API' },
-    { type: 'GraphQL', icon: <ApiOutlined />, category: 'API' },
-  ];
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'connected':
-        return <CheckCircleOutlined style={{ color: '#52c41a' }} />;
-      case 'syncing':
-        return <ClockCircleOutlined style={{ color: '#fa8c16' }} />;
-      case 'error':
-        return <ExclamationCircleOutlined style={{ color: '#f5222d' }} />;
-      default:
-        return null;
+  // Load data sources from API
+  const loadDataSources = async () => {
+    try {
+      const sources = await dataSourcesService.getDataSources();
+      setDataSources(sources);
+    } catch (error) {
+      console.error('Error loading data sources:', error);
+      message.error('Failed to load data sources');
     }
   };
 
-  const getStatusTag = (status: string) => {
-    switch (status) {
-      case 'connected':
-        return <Tag color="success">Connected</Tag>;
-      case 'syncing':
-        return <Tag color="processing">Syncing</Tag>;
-      case 'error':
-        return <Tag color="error">Error</Tag>;
-      default:
-        return null;
-    }
-  };
+  useEffect(() => {
+    loadDataSources();
+  }, []);
+
+  const dataSourceTypes = [
+    { value: 'postgresql', label: 'PostgreSQL', icon: <DatabaseOutlined />, color: '#336791' },
+    { value: 'mysql', label: 'MySQL', icon: <DatabaseOutlined />, color: '#4479A1' },
+    { value: 'sqlite', label: 'SQLite', icon: <DatabaseOutlined />, color: '#003B57' },
+    { value: 'mongodb', label: 'MongoDB', icon: <DatabaseOutlined />, color: '#47A248' },
+    { value: 'bigquery', label: 'Google BigQuery', icon: <CloudOutlined />, color: '#4285F4' },
+    { value: 'snowflake', label: 'Snowflake', icon: <CloudOutlined />, color: '#56C0E0' },
+    { value: 'rest_api', label: 'REST API', icon: <ApiOutlined />, color: '#FF6B35' },
+    { value: 'csv', label: 'CSV File', icon: <FileTextOutlined />, color: '#52C41A' },
+    { value: 'google_sheets', label: 'Google Sheets', icon: <GoogleOutlined />, color: '#34A853' }
+  ];
 
   const handleAddDataSource = () => {
+    setEditingSource(null);
+    form.resetFields();
     setIsModalVisible(true);
   };
 
-  const handleModalOk = () => {
-    form.validateFields().then((values) => {
-      console.log('Form values:', values);
-      message.success('Data source added successfully!');
-      setIsModalVisible(false);
-      form.resetFields();
-    });
+  const handleEditDataSource = (source: DataSource) => {
+    setEditingSource(source);
+    form.setFieldsValue(source);
+    setIsModalVisible(true);
   };
 
-  const handleModalCancel = () => {
-    setIsModalVisible(false);
-    form.resetFields();
+  const handleDeleteDataSource = async (id: string) => {
+    try {
+      await dataSourcesService.deleteDataSource(id);
+      setDataSources(prev => prev.filter(ds => ds.id !== id));
+      message.success('Data source deleted successfully');
+    } catch (error) {
+      console.error('Error deleting data source:', error);
+      message.error('Failed to delete data source');
+    }
+  };
+
+  const handleTestConnection = async (source: DataSource) => {
+    setTestingConnection(source.id);
+    
+    try {
+      // Set status to testing while we test
+      setDataSources(prev => 
+        prev.map(ds => 
+          ds.id === source.id 
+            ? { ...ds, status: 'testing' }
+            : ds
+        )
+      );
+
+      const result = await dataSourcesService.testConnection(source.id);
+      
+      // Update status and metadata based on test result
+      setDataSources(prev => 
+        prev.map(ds => 
+          ds.id === source.id 
+            ? { 
+                ...ds, 
+                status: result.success ? 'connected' : 'error',
+                last_connected: new Date().toISOString(),
+                tables_count: result.tables_count || ds.tables_count,
+                size: result.size || ds.size,
+                tables: result.tables || ds.tables
+              }
+            : ds
+        )
+      );
+      
+      message[result.success ? 'success' : 'error'](result.message);
+    } catch (error) {
+      console.error('Error testing connection:', error);
+      
+      // Set status to error
+      setDataSources(prev => 
+        prev.map(ds => 
+          ds.id === source.id 
+            ? { ...ds, status: 'error' }
+            : ds
+        )
+      );
+      
+      message.error('Connection test failed');
+    } finally {
+      setTestingConnection(null);
+    }
+  };
+
+  const handleViewTables = (source: DataSource) => {
+    setSelectedSource(source);
+    setDrawerVisible(true);
+  };
+
+  const handleSubmit = async (values: any) => {
+    try {
+      if (editingSource) {
+        // Update existing data source
+        const updatedSource = await dataSourcesService.updateDataSource(editingSource.id, values);
+        setDataSources(prev => prev.map(ds => ds.id === editingSource.id ? updatedSource : ds));
+        message.success('Data source updated successfully');
+      } else {
+        // Create new data source
+        const newSource = await dataSourcesService.createDataSource(values as DataSourceCreate);
+        setDataSources(prev => [...prev, newSource]);
+        message.success('Data source added successfully');
+        
+        // Test connection automatically after creation
+        setTimeout(() => handleTestConnection(newSource), 500);
+      }
+
+      setIsModalVisible(false);
+    } catch (error) {
+      console.error('Error saving data source:', error);
+      message.error('Failed to save data source');
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'connected': return 'green';
+      case 'disconnected': return 'orange';
+      case 'testing': return 'blue';
+      case 'error': return 'red';
+      default: return 'gray';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'connected': return <CheckCircleOutlined />;
+      case 'error': return <CloseCircleOutlined />;
+      case 'testing': return <ReloadOutlined spin />;
+      default: return <ReloadOutlined spin />;
+    }
+  };
+
+  const columns = [
+    {
+      title: 'Name',
+      dataIndex: 'name',
+      key: 'name',
+      render: (text: string, record: DataSource) => {
+        const typeConfig = dataSourceTypes.find(t => t.value === record.type);
+        return (
+          <Space>
+            <span style={{ color: typeConfig?.color }}>{typeConfig?.icon}</span>
+            <strong>{text}</strong>
+          </Space>
+        );
+      }
+    },
+    {
+      title: 'Type',
+      dataIndex: 'type',
+      key: 'type',
+      render: (type: string) => {
+        const typeConfig = dataSourceTypes.find(t => t.value === type);
+        return (
+          <Tag color="blue">
+            {typeConfig?.label}
+          </Tag>
+        );
+      }
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status: string) => (
+        <Badge 
+          status={getStatusColor(status) as any}
+          text={
+            <Space>
+              {getStatusIcon(status)}
+              {status.charAt(0).toUpperCase() + status.slice(1)}
+            </Space>
+          }
+        />
+      )
+    },
+    {
+      title: 'Connection',
+      key: 'connection',
+      render: (_, record: DataSource) => {
+        if (record.host) {
+          return `${record.host}:${record.port}`;
+        }
+        if (record.connection_string) {
+          return record.connection_string.length > 40 
+            ? `${record.connection_string.substring(0, 40)}...`
+            : record.connection_string;
+        }
+        return record.database || 'N/A';
+      }
+    },
+    {
+      title: 'Tables',
+      dataIndex: 'tables_count',
+      key: 'tables_count',
+      render: (count: number) => count || 0
+    },
+    {
+      title: 'Size',
+      dataIndex: 'size',
+      key: 'size',
+      render: (size: string) => size || 'N/A'
+    },
+    {
+      title: 'Last Connected',
+      dataIndex: 'last_connected',
+      key: 'last_connected',
+      render: (date: string) => date ? new Date(date).toLocaleString() : 'Never'
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      render: (_, record: DataSource) => (
+        <Space>
+          <Tooltip title="Test Connection">
+            <Button
+              size="small"
+              icon={<ReloadOutlined />}
+              loading={testingConnection === record.id}
+              onClick={() => handleTestConnection(record)}
+            />
+          </Tooltip>
+          <Tooltip title="View Tables">
+            <Button
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => handleViewTables(record)}
+              disabled={!record.tables || record.tables.length === 0}
+            />
+          </Tooltip>
+          <Tooltip title="Edit">
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => handleEditDataSource(record)}
+            />
+          </Tooltip>
+          <Popconfirm
+            title="Are you sure you want to delete this data source?"
+            onConfirm={() => handleDeleteDataSource(record.id)}
+            okText="Yes"
+            cancelText="No"
+          >
+            <Tooltip title="Delete">
+              <Button
+                size="small"
+                icon={<DeleteOutlined />}
+                danger
+              />
+            </Tooltip>
+          </Popconfirm>
+        </Space>
+      )
+    }
+  ];
+
+  const connectedCount = dataSources.filter(ds => ds.status === 'connected').length;
+  const errorCount = dataSources.filter(ds => ds.status === 'error').length;
+  const totalTables = dataSources.reduce((sum, ds) => sum + (ds.tables_count || 0), 0);
+
+  const renderConnectionFields = (type: string) => {
+    switch (type) {
+      case 'postgresql':
+      case 'mysql':
+        return (
+          <>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  name="host"
+                  label="Host"
+                  rules={[{ required: true, message: 'Please enter host' }]}
+                >
+                  <Input placeholder="localhost" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  name="port"
+                  label="Port"
+                  rules={[{ required: true, message: 'Please enter port' }]}
+                >
+                  <Input placeholder={type === 'postgresql' ? '5432' : '3306'} />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Form.Item
+              name="database"
+              label="Database"
+              rules={[{ required: true, message: 'Please enter database name' }]}
+            >
+              <Input placeholder="database_name" />
+            </Form.Item>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  name="username"
+                  label="Username"
+                  rules={[{ required: true, message: 'Please enter username' }]}
+                >
+                  <Input placeholder="username" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  name="password"
+                  label="Password"
+                  rules={[{ required: true, message: 'Please enter password' }]}
+                >
+                  <Input.Password placeholder="password" />
+                </Form.Item>
+              </Col>
+            </Row>
+          </>
+        );
+      case 'rest_api':
+      case 'google_sheets':
+      case 'csv':
+        return (
+          <Form.Item
+            name="connection_string"
+            label="URL/Path"
+            rules={[{ required: true, message: 'Please enter URL or file path' }]}
+          >
+            <Input placeholder="https://api.example.com or /path/to/file.csv" />
+          </Form.Item>
+        );
+      case 'bigquery':
+      case 'snowflake':
+        return (
+          <>
+            <Form.Item
+              name="database"
+              label="Project/Account"
+              rules={[{ required: true, message: 'Please enter project or account' }]}
+            >
+              <Input placeholder="project-id or account-name" />
+            </Form.Item>
+            <Form.Item
+              name="connection_string"
+              label="Service Account/Connection String"
+              rules={[{ required: true, message: 'Please enter credentials' }]}
+            >
+              <TextArea placeholder="Service account JSON or connection string" />
+            </Form.Item>
+          </>
+        );
+      default:
+        return null;
+    }
   };
 
   return (
-    <div>
-      <Row gutter={[16, 16]}>
-        <Col span={24}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <Title level={2}>Data Sources</Title>
-              <Text type="secondary">
-                Connect and manage your data sources. SimpleIQ supports 50+ connectors.
-              </Text>
-            </div>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              size="large"
-              onClick={handleAddDataSource}
-            >
-              Add Data Source
-            </Button>
-          </div>
+    <div style={{ padding: '24px' }}>
+      {/* Statistics Row */}
+      <Row gutter={16} style={{ marginBottom: '24px' }}>
+        <Col span={6}>
+          <Card>
+            <Statistic
+              title="Total Data Sources"
+              value={dataSources.length}
+              prefix={<DatabaseOutlined />}
+            />
+          </Card>
         </Col>
-      </Row>
-
-      <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
-        {dataSources.map((source) => (
-          <Col xs={24} sm={12} lg={6} key={source.id}>
-            <Card
-              hoverable
-              style={{ height: '100%' }}
-              actions={[
-                <Button type="text" icon={<SyncOutlined />} key="sync">
-                  Sync
-                </Button>,
-                <Button type="text" icon={<SettingOutlined />} key="settings">
-                  Settings
-                </Button>,
-                <Button type="text" danger icon={<DeleteOutlined />} key="delete">
-                  Delete
-                </Button>,
-              ]}
-            >
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 48, color: source.color, marginBottom: 16 }}>
-                  {source.icon}
-                </div>
-                <Title level={4} style={{ marginBottom: 8 }}>
-                  {source.name}
-                </Title>
-                <Text type="secondary">{source.type}</Text>
-                <div style={{ marginTop: 16 }}>
-                  {getStatusTag(source.status)}
-                </div>
-                <div style={{ marginTop: 16 }}>
-                  <div style={{ marginBottom: 8 }}>
-                    <Text type="secondary">Last sync: </Text>
-                    <Text>{source.lastSync}</Text>
-                  </div>
-                  <div>
-                    <Text type="secondary">Records: </Text>
-                    <Text strong>{source.records}</Text>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </Col>
-        ))}
-      </Row>
-
-      <Row gutter={[16, 16]} style={{ marginTop: 32 }}>
-        <Col span={24}>
-          <Card title="Available Connectors">
-            <Paragraph>
-              SimpleIQ supports a wide range of data connectors. Choose from databases, cloud storage,
-              file uploads, and API integrations.
-            </Paragraph>
-            <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-              {connectorTypes.map((connector, index) => (
-                <Col xs={12} sm={8} md={6} lg={4} key={index}>
-                  <div
-                    style={{
-                      textAlign: 'center',
-                      padding: 16,
-                      border: '1px solid #f0f0f0',
-                      borderRadius: 8,
-                      cursor: 'pointer',
-                      transition: 'all 0.3s',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = '#1890ff';
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = '#f0f0f0';
-                      e.currentTarget.style.transform = 'translateY(0)';
-                    }}
-                  >
-                    <div style={{ fontSize: 32, color: '#1890ff', marginBottom: 8 }}>
-                      {connector.icon}
-                    </div>
-                    <Text>{connector.type}</Text>
-                  </div>
-                </Col>
-              ))}
-            </Row>
+        <Col span={6}>
+          <Card>
+            <Statistic
+              title="Connected"
+              value={connectedCount}
+              prefix={<CheckCircleOutlined />}
+              valueStyle={{ color: '#3f8600' }}
+            />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card>
+            <Statistic
+              title="Errors"
+              value={errorCount}
+              prefix={<CloseCircleOutlined />}
+              valueStyle={{ color: '#cf1322' }}
+            />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card>
+            <Statistic
+              title="Total Tables"
+              value={totalTables}
+              prefix={<TableOutlined />}
+            />
           </Card>
         </Col>
       </Row>
 
+      {/* Data Sources Table */}
+      <Card
+        title={
+          <Space>
+            <DatabaseOutlined />
+            <span>Data Sources</span>
+          </Space>
+        }
+        extra={
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={handleAddDataSource}
+          >
+            Add Data Source
+          </Button>
+        }
+      >
+        <Table
+          columns={columns}
+          dataSource={dataSources}
+          rowKey="id"
+          pagination={{ pageSize: 10 }}
+          scroll={{ x: 1200 }}
+        />
+      </Card>
+
+      {/* Add/Edit Modal */}
       <Modal
-        title="Add New Data Source"
+        title={editingSource ? 'Edit Data Source' : 'Add Data Source'}
         open={isModalVisible}
-        onOk={handleModalOk}
-        onCancel={handleModalCancel}
+        onCancel={() => setIsModalVisible(false)}
+        footer={null}
         width={600}
       >
-        <Form form={form} layout="vertical">
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
+        >
+          <Form.Item
+            name="name"
+            label="Name"
+            rules={[{ required: true, message: 'Please enter a name' }]}
+          >
+            <Input placeholder="My Database" />
+          </Form.Item>
+
           <Form.Item
             name="type"
-            label="Connection Type"
-            rules={[{ required: true, message: 'Please select a connection type' }]}
+            label="Type"
+            rules={[{ required: true, message: 'Please select a type' }]}
           >
-            <Select placeholder="Select a connection type" size="large">
-              {connectorTypes.map((connector) => (
-                <Option key={connector.type} value={connector.type}>
+            <Select placeholder="Select database type">
+              {dataSourceTypes.map(type => (
+                <Option key={type.value} value={type.value}>
                   <Space>
-                    {connector.icon}
-                    {connector.type}
+                    <span style={{ color: type.color }}>{type.icon}</span>
+                    {type.label}
                   </Space>
                 </Option>
               ))}
             </Select>
           </Form.Item>
 
-          <Form.Item
-            name="name"
-            label="Connection Name"
-            rules={[{ required: true, message: 'Please enter a connection name' }]}
-          >
-            <Input placeholder="e.g., Production Database" size="large" />
+          <Form.Item noStyle shouldUpdate={(prev, current) => prev.type !== current.type}>
+            {({ getFieldValue }) => renderConnectionFields(getFieldValue('type'))}
           </Form.Item>
 
           <Form.Item
-            name="host"
-            label="Host"
-            rules={[{ required: true, message: 'Please enter the host' }]}
+            name="description"
+            label="Description"
           >
-            <Input placeholder="e.g., localhost or 192.168.1.1" size="large" />
+            <TextArea
+              placeholder="Optional description of this data source"
+              rows={3}
+            />
           </Form.Item>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="port"
-                label="Port"
-                rules={[{ required: true, message: 'Please enter the port' }]}
-              >
-                <Input placeholder="e.g., 5432" size="large" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="database"
-                label="Database Name"
-                rules={[{ required: true, message: 'Please enter the database name' }]}
-              >
-                <Input placeholder="e.g., mydb" size="large" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="username"
-                label="Username"
-                rules={[{ required: true, message: 'Please enter the username' }]}
-              >
-                <Input placeholder="Username" size="large" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="password"
-                label="Password"
-                rules={[{ required: true, message: 'Please enter the password' }]}
-              >
-                <Input.Password placeholder="Password" size="large" />
-              </Form.Item>
-            </Col>
-          </Row>
+          <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
+            <Space>
+              <Button onClick={() => setIsModalVisible(false)}>
+                Cancel
+              </Button>
+              <Button type="primary" htmlType="submit">
+                {editingSource ? 'Update' : 'Add'} Data Source
+              </Button>
+            </Space>
+          </Form.Item>
         </Form>
       </Modal>
+
+      {/* Tables Drawer */}
+      <Drawer
+        title={
+          <Space>
+            <TableOutlined />
+            <span>Tables - {selectedSource?.name}</span>
+          </Space>
+        }
+        width={600}
+        onClose={() => setDrawerVisible(false)}
+        open={drawerVisible}
+      >
+        {selectedSource?.tables && (
+          <div>
+            <Alert
+              message={`${selectedSource.tables.length} tables found in ${selectedSource.name}`}
+              type="info"
+              style={{ marginBottom: 16 }}
+            />
+            
+            <Table
+              dataSource={selectedSource.tables}
+              pagination={false}
+              size="small"
+              columns={[
+                {
+                  title: 'Table Name',
+                  dataIndex: 'name',
+                  key: 'name',
+                  render: (name: string) => (
+                    <Space>
+                      <TableOutlined />
+                      <strong>{name}</strong>
+                    </Space>
+                  )
+                },
+                {
+                  title: 'Rows',
+                  dataIndex: 'rows',
+                  key: 'rows',
+                  render: (rows: number) => rows.toLocaleString()
+                },
+                {
+                  title: 'Size',
+                  dataIndex: 'size',
+                  key: 'size'
+                }
+              ]}
+            />
+          </div>
+        )}
+      </Drawer>
     </div>
   );
 };

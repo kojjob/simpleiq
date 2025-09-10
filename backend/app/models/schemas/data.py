@@ -11,21 +11,23 @@ from pydantic import BaseModel, Field
 
 class DataSourceType(str, Enum):
     """Supported data source types"""
-    GOOGLE_SHEETS = "google_sheets"
-    CSV = "csv"
-    REST_API = "rest_api"
-    MYSQL = "mysql"
     POSTGRESQL = "postgresql"
-    EXCEL = "excel"
+    MYSQL = "mysql"
+    SQLITE = "sqlite"
+    MONGODB = "mongodb"
+    BIGQUERY = "bigquery"
+    SNOWFLAKE = "snowflake"
+    REST_API = "rest_api"
+    CSV = "csv"
+    GOOGLE_SHEETS = "google_sheets"
 
 
 class DataSourceStatus(str, Enum):
     """Data source connection status"""
-    ACTIVE = "active"
-    PENDING = "pending"
-    ERROR = "error"
-    SYNCING = "syncing"
+    CONNECTED = "connected"
     DISCONNECTED = "disconnected"
+    TESTING = "testing"
+    ERROR = "error"
 
 
 class GoogleSheetsConfig(BaseModel):
@@ -55,27 +57,45 @@ class DatabaseConfig(BaseModel):
     query: Optional[str] = None
 
 
+class TableInfo(BaseModel):
+    """Table information"""
+    name: str
+    rows: int
+    size: str
+
+
+class ConnectionTestResponse(BaseModel):
+    """Connection test response"""
+    success: bool
+    message: str
+    tables_count: Optional[int] = None
+    size: Optional[str] = None
+    tables: Optional[list[TableInfo]] = None
+
+
 class DataSourceCreate(BaseModel):
     """Create data source request"""
     name: str = Field(..., min_length=1, max_length=100)
     type: DataSourceType
-    config: Dict[str, Any]
+    host: Optional[str] = None
+    port: Optional[int] = None
+    database: Optional[str] = None
+    username: Optional[str] = None
+    password: Optional[str] = None
+    connection_string: Optional[str] = None
     description: Optional[str] = Field(None, max_length=500)
-    sync_frequency: Optional[str] = Field(
-        default="manual",
-        pattern="^(manual|hourly|daily|weekly|realtime)$"
-    )
 
 
 class DataSourceUpdate(BaseModel):
     """Update data source request"""
     name: Optional[str] = Field(None, min_length=1, max_length=100)
-    config: Optional[Dict[str, Any]] = None
+    host: Optional[str] = None
+    port: Optional[int] = None
+    database: Optional[str] = None
+    username: Optional[str] = None
+    password: Optional[str] = None
+    connection_string: Optional[str] = None
     description: Optional[str] = Field(None, max_length=500)
-    sync_frequency: Optional[str] = Field(
-        None,
-        pattern="^(manual|hourly|daily|weekly|realtime)$"
-    )
 
 
 class DataSourceResponse(BaseModel):
@@ -84,11 +104,18 @@ class DataSourceResponse(BaseModel):
     name: str
     type: DataSourceType
     status: DataSourceStatus
+    host: Optional[str] = None
+    port: Optional[int] = None
+    database: Optional[str] = None
+    username: Optional[str] = None
+    connection_string: Optional[str] = None
     description: Optional[str] = None
-    sync_frequency: str = "manual"
-    last_sync: Optional[datetime] = None
+    tables_count: Optional[int] = None
+    size: Optional[str] = None
+    last_connected: Optional[datetime] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
+    tables: Optional[list[TableInfo]] = None
     
     class Config:
         from_attributes = True
