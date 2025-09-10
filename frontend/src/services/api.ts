@@ -9,6 +9,32 @@ const api = axios.create({
   },
 })
 
+// Keep track of refresh attempts to prevent infinite loops
+let isRefreshing = false
+let failedQueue: Array<{
+  resolve: (value?: any) => void
+  reject: (reason?: any) => void
+}> = []
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error)
+    } else {
+      resolve(token)
+    }
+  })
+  
+  failedQueue = []
+}
+
+// Function to get auth store (will be set up after store is created)
+let getAuthStore: (() => any) | null = null
+
+export const setAuthStoreAccessor = (accessor: () => any) => {
+  getAuthStore = accessor
+}
+
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
@@ -20,15 +46,58 @@ api.interceptors.request.use(
   }
 )
 
-// Response interceptor to handle errors
+// Response interceptor to handle errors and token refresh
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Clear auth and redirect to login
-      localStorage.removeItem('auth-storage')
-      window.location.href = '/login'
+  async (error) => {
+    const originalRequest = error.config
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        // If refresh is already in progress, queue this request
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject })
+        }).then(token => {
+          originalRequest.headers['Authorization'] = `Bearer ${token}`
+          return api(originalRequest)
+        }).catch(err => {
+          return Promise.reject(err)
+        })
+      }
+
+      originalRequest._retry = true
+      isRefreshing = true
+
+      try {
+        if (getAuthStore) {
+          const authStore = getAuthStore()
+          if (authStore.refreshToken) {
+            await authStore.refreshAccessToken()
+            const newToken = authStore.token
+            processQueue(null, newToken)
+            originalRequest.headers['Authorization'] = `Bearer ${newToken}`
+            return api(originalRequest)
+          }
+        }
+        
+        // No refresh token available, logout
+        if (getAuthStore) {
+          getAuthStore().logout()
+        }
+        processQueue(error, null)
+        return Promise.reject(error)
+      } catch (refreshError) {
+        // Refresh failed, logout
+        if (getAuthStore) {
+          getAuthStore().logout()
+        }
+        processQueue(refreshError, null)
+        return Promise.reject(refreshError)
+      } finally {
+        isRefreshing = false
+      }
     }
+
     return Promise.reject(error)
   }
 )
