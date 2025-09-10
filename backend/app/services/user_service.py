@@ -10,13 +10,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.schemas.auth import UserCreate
-from app.models.schemas.user import User, UserInDB
+from app.models.schemas.user import User as UserSchema
+from app.models.user import User as UserModel
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-# In-memory user storage (for development only)
-USERS_DB = {}
 
 
 class UserService:
@@ -33,67 +31,64 @@ class UserService:
         """Verify a password against hash"""
         return pwd_context.verify(plain_password, hashed_password)
     
-    async def create_user(self, user_create: UserCreate) -> User:
+    async def create_user(self, user_create: UserCreate) -> UserSchema:
         """Create a new user"""
-        from datetime import datetime
-        
         # Check if user already exists
-        if user_create.email in USERS_DB:
+        existing_user = await self.get_by_email(user_create.email)
+        if existing_user:
             raise ValueError("User with this email already exists")
         
-        user_id = str(uuid4())
+        # Create new user in database
         hashed_password = self.get_password_hash(user_create.password)
         
-        # Store user in memory with password
-        user_in_db = UserInDB(
-            id=user_id,
+        db_user = UserModel(
             email=user_create.email,
+            hashed_password=hashed_password,
             full_name=user_create.full_name,
             company_name=user_create.company_name,
             is_active=True,
-            is_superuser=False,
-            created_at=datetime.utcnow(),
-            updated_at=None,
-            hashed_password=hashed_password
+            is_superuser=False
         )
         
-        USERS_DB[user_create.email] = user_in_db
+        self.db.add(db_user)
+        await self.db.commit()
+        await self.db.refresh(db_user)
         
-        # Return user without password
-        user = User(
-            id=user_id,
-            email=user_create.email,
-            full_name=user_create.full_name,
-            company_name=user_create.company_name,
-            is_active=True,
-            is_superuser=False,
-            created_at=datetime.utcnow(),
-            updated_at=None
+        # Return user schema without password
+        return UserSchema(
+            id=str(db_user.id),
+            email=db_user.email,
+            full_name=db_user.full_name,
+            company_name=db_user.company_name,
+            is_active=db_user.is_active,
+            is_superuser=db_user.is_superuser,
+            created_at=db_user.created_at,
+            updated_at=db_user.updated_at
         )
-        
-        return user
     
-    async def get_by_email(self, email: str) -> Optional[UserInDB]:
-        """Get user by email"""
-        # Return user from in-memory storage
-        return USERS_DB.get(email)
+    async def get_by_email(self, email: str) -> Optional[UserModel]:
+        """Get user by email from database"""
+        result = await self.db.execute(
+            select(UserModel).where(UserModel.email == email)
+        )
+        return result.scalar_one_or_none()
     
-    async def authenticate(self, email: str, password: str) -> Optional[User]:
+    async def authenticate(self, email: str, password: str) -> Optional[UserSchema]:
         """Authenticate a user"""
-        user_in_db = await self.get_by_email(email)
-        if not user_in_db:
+        user = await self.get_by_email(email)
+        if not user:
             return None
-        if not self.verify_password(password, user_in_db.hashed_password):
+        if not self.verify_password(password, user.hashed_password):
             return None
         
-        # Return User without password
-        return User(
-            id=user_in_db.id,
-            email=user_in_db.email,
-            full_name=user_in_db.full_name,
-            company_name=user_in_db.company_name,
-            is_active=user_in_db.is_active,
-            is_superuser=user_in_db.is_superuser,
-            created_at=user_in_db.created_at,
-            updated_at=user_in_db.updated_at
+        # Return User schema without password
+        return UserSchema(
+            id=str(user.id),
+            email=user.email,
+            full_name=user.full_name,
+            company_name=user.company_name,
+            is_active=user.is_active,
+            is_superuser=user.is_superuser,
+            created_at=user.created_at,
+            updated_at=user.updated_at
         )

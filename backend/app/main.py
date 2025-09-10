@@ -14,6 +14,8 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from app.api.v1 import auth, data, queries, dashboards, data_sources
 from app.core.config import settings
 from app.core.database import create_db_tables
+# Import models to register them with SQLAlchemy
+import app.models
 
 
 @asynccontextmanager
