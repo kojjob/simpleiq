@@ -27,6 +27,7 @@ import {
 import dataSourcesService, { DataSource, DataSourceCreate } from '../services/dataSourcesService';
 import googleOAuthService from '../services/googleOAuthService';
 import GoogleSheetsModal from '../components/GoogleSheetsModal';
+import DataPreviewModal from '../components/DataPreviewModal';
 import {
   DatabaseOutlined,
   PlusOutlined,
@@ -60,6 +61,8 @@ const DataSources: React.FC = () => {
   const [selectedSource, setSelectedSource] = useState<DataSource | null>(null);
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [googleSheetsModalVisible, setGoogleSheetsModalVisible] = useState(false);
+  const [dataPreviewModalVisible, setDataPreviewModalVisible] = useState(false);
+  const [previewDataSource, setPreviewDataSource] = useState<DataSource | null>(null);
   const [form] = Form.useForm();
 
   // Load data sources from API
@@ -183,6 +186,11 @@ const DataSources: React.FC = () => {
   const handleViewTables = (source: DataSource) => {
     setSelectedSource(source);
     setDrawerVisible(true);
+  };
+
+  const handlePreviewData = (source: DataSource) => {
+    setPreviewDataSource(source);
+    setDataPreviewModalVisible(true);
   };
 
   const handleSubmit = async (values: any) => {
@@ -318,6 +326,15 @@ const DataSources: React.FC = () => {
               onClick={() => handleTestConnection(record)}
             />
           </Tooltip>
+          {record.type === 'google_sheets' && record.status === 'connected' && (
+            <Tooltip title="Preview Data">
+              <Button
+                size="small"
+                icon={<TableOutlined />}
+                onClick={() => handlePreviewData(record)}
+              />
+            </Tooltip>
+          )}
           <Tooltip title="View Tables">
             <Button
               size="small"
@@ -686,6 +703,16 @@ const DataSources: React.FC = () => {
         onCancel={() => setGoogleSheetsModalVisible(false)}
         onSuccess={handleGoogleSheetsSuccess}
       />
+
+      {/* Data Preview Modal */}
+      {previewDataSource && (
+        <DataPreviewModal
+          visible={dataPreviewModalVisible}
+          onCancel={() => setDataPreviewModalVisible(false)}
+          dataSourceId={previewDataSource.id}
+          dataSourceName={previewDataSource.name}
+        />
+      )}
     </div>
   );
 };

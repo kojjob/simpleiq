@@ -45,6 +45,58 @@ export interface SheetsTestConnectionResponse {
   };
 }
 
+export interface DataPreviewResponse {
+  data_source_id: string;
+  schema: {
+    columns: Array<{
+      name: string;
+      original_name: string;
+      type: string;
+      nullable: boolean;
+      unique_count: number;
+      null_count: number;
+      null_percentage: number;
+      sample_values: string[];
+    }>;
+    total_rows: number;
+    spreadsheet_id: string;
+    sheet_name: string;
+  };
+  data: {
+    rows: Array<Record<string, any>>;
+    count: number;
+    limit: number;
+    offset: number;
+    has_more: boolean;
+  };
+  message: string;
+}
+
+export interface SchemaResponse {
+  data_source_id: string;
+  schema: {
+    columns: Array<{
+      name: string;
+      original_name: string;
+      type: string;
+      nullable: boolean;
+      unique_count: number;
+      null_count: number;
+      null_percentage: number;
+      sample_values: string[];
+    }>;
+    row_count: number;
+    spreadsheet_id: string;
+    sheet_name: string;
+    sheet_dimensions: {
+      rows: number;
+      columns: number;
+    };
+    last_updated: string | null;
+  };
+  message: string;
+}
+
 class GoogleOAuthService {
   /**
    * Create a new Google Sheets connection and get OAuth URL
@@ -176,6 +228,28 @@ class GoogleOAuthService {
       console.error('Google Sheets OAuth flow failed:', error);
       throw error;
     }
+  }
+
+  /**
+   * Preview data from Google Sheets data source
+   */
+  async previewSheetsData(
+    dataSourceId: string,
+    limit: number = 10,
+    offset: number = 0
+  ): Promise<DataPreviewResponse> {
+    const response = await api.get(`/api/v1/google/sheets/${dataSourceId}/preview`, {
+      params: { limit, offset }
+    });
+    return response.data;
+  }
+
+  /**
+   * Get detailed schema information for Google Sheets data source
+   */
+  async getSheetsSchema(dataSourceId: string): Promise<SchemaResponse> {
+    const response = await api.get(`/api/v1/google/sheets/${dataSourceId}/schema`);
+    return response.data;
   }
 }
 

@@ -357,6 +357,149 @@ async def test_sheets_connection(
         )
 
 
+@router.get("/sheets/{data_source_id}/preview")
+async def preview_sheets_data(
+    data_source_id: str,
+    limit: int = Query(default=10, ge=1, le=100, description="Number of rows to preview"),
+    offset: int = Query(default=0, ge=0, description="Number of rows to skip"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db)
+):
+    """
+    Preview data from Google Sheets data source
+    
+    Returns a sample of data from the connected Google Sheets for preview purposes.
+    Includes both schema information and actual data rows.
+    """
+    try:
+        # Get the data source
+        data_source = await db.get(DataSource, data_source_id)
+        if not data_source:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Data source not found"
+            )
+        
+        # Verify ownership
+        if data_source.user_id != str(current_user.id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied to data source"
+            )
+        
+        # Verify it's a Google Sheets source
+        if data_source.type != DataSourceType.google_sheets:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Data source is not a Google Sheets connection"
+            )
+        
+        # Create connector and validate connection
+        connector = GoogleSheetsConnector(data_source, db)
+        is_valid, error_message = await connector.validate_connection()
+        
+        if not is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unable to connect to data source: {error_message}"
+            )
+        
+        # Get schema and data
+        schema = await connector.fetch_schema()
+        data_rows = await connector.fetch_data(limit=limit, offset=offset)
+        
+        return {
+            "data_source_id": data_source_id,
+            "schema": {
+                "columns": schema.get("columns", []),
+                "total_rows": schema.get("row_count", 0),
+                "spreadsheet_id": schema.get("spreadsheet_id"),
+                "sheet_name": schema.get("sheet_name")
+            },
+            "data": {
+                "rows": data_rows,
+                "count": len(data_rows),
+                "limit": limit,
+                "offset": offset,
+                "has_more": len(data_rows) == limit
+            },
+            "message": f"Preview showing {len(data_rows)} rows (limit: {limit}, offset: {offset})"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Data preview failed for user {current_user.id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to preview data"
+        )
+
+
+@router.get("/sheets/{data_source_id}/schema")
+async def get_sheets_schema(
+    data_source_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db)
+):
+    """
+    Get detailed schema information for Google Sheets data source
+    
+    Returns comprehensive schema information including column types, 
+    sample values, and data quality metrics.
+    """
+    try:
+        # Get the data source
+        data_source = await db.get(DataSource, data_source_id)
+        if not data_source:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Data source not found"
+            )
+        
+        # Verify ownership
+        if data_source.user_id != str(current_user.id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied to data source"
+            )
+        
+        # Verify it's a Google Sheets source
+        if data_source.type != DataSourceType.google_sheets:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Data source is not a Google Sheets connection"
+            )
+        
+        # Create connector and validate connection
+        connector = GoogleSheetsConnector(data_source, db)
+        is_valid, error_message = await connector.validate_connection()
+        
+        if not is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Unable to connect to data source: {error_message}"
+            )
+        
+        # Get detailed schema information
+        schema = await connector.fetch_schema()
+        
+        return {
+            "data_source_id": data_source_id,
+            "schema": schema,
+            "message": "Schema information retrieved successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Schema retrieval failed for user {current_user.id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve schema"
+        )
+
+
 @router.get("/callback")
 async def oauth_callback_redirect(
     code: str = Query(..., description="Authorization code from Google"),
