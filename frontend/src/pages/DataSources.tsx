@@ -19,7 +19,6 @@ import {
   Typography,
   Tabs,
   Alert,
-  Progress,
   Drawer
 } from 'antd';
 import dataSourcesService, { DataSource, DataSourceCreate } from '../services/dataSourcesService';
