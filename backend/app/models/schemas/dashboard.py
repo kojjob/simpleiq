@@ -4,7 +4,7 @@ Dashboard and widget schemas
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -35,18 +35,18 @@ class WidgetCreate(BaseModel):
     type: ChartType
     query: str = Field(..., min_length=1, max_length=500)
     position: WidgetPosition
-    config: Optional[Dict[str, Any]] = Field(None, description="Chart configuration")
-    refresh_interval: Optional[int] = Field(None, ge=0, description="Auto-refresh in seconds")
+    config: dict[str, Any] | None = Field(None, description="Chart configuration")
+    refresh_interval: int | None = Field(None, ge=0, description="Auto-refresh in seconds")
 
 
 class WidgetUpdate(BaseModel):
     """Update widget request"""
-    title: Optional[str] = Field(None, min_length=1, max_length=100)
-    type: Optional[ChartType] = None
-    query: Optional[str] = Field(None, min_length=1, max_length=500)
-    position: Optional[WidgetPosition] = None
-    config: Optional[Dict[str, Any]] = None
-    refresh_interval: Optional[int] = Field(None, ge=0)
+    title: str | None = Field(None, min_length=1, max_length=100)
+    type: ChartType | None = None
+    query: str | None = Field(None, min_length=1, max_length=500)
+    position: WidgetPosition | None = None
+    config: dict[str, Any] | None = None
+    refresh_interval: int | None = Field(None, ge=0)
 
 
 class WidgetResponse(BaseModel):
@@ -56,9 +56,9 @@ class WidgetResponse(BaseModel):
     type: ChartType
     query: str
     position: WidgetPosition
-    config: Optional[Dict[str, Any]] = None
-    refresh_interval: Optional[int] = None
-    last_updated: Optional[datetime] = None
+    config: dict[str, Any] | None = None
+    refresh_interval: int | None = None
+    last_updated: datetime | None = None
     
     class Config:
         from_attributes = True
@@ -67,30 +67,30 @@ class WidgetResponse(BaseModel):
 class DashboardCreate(BaseModel):
     """Create dashboard request"""
     name: str = Field(..., min_length=1, max_length=100)
-    description: Optional[str] = Field(None, max_length=500)
+    description: str | None = Field(None, max_length=500)
     is_public: bool = Field(default=False, description="Make dashboard publicly accessible")
-    tags: Optional[List[str]] = Field(None, max_items=10)
+    tags: list[str] | None = Field(None, max_items=10)
 
 
 class DashboardUpdate(BaseModel):
     """Update dashboard request"""
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
-    description: Optional[str] = Field(None, max_length=500)
-    is_public: Optional[bool] = None
-    tags: Optional[List[str]] = Field(None, max_items=10)
+    name: str | None = Field(None, min_length=1, max_length=100)
+    description: str | None = Field(None, max_length=500)
+    is_public: bool | None = None
+    tags: list[str] | None = Field(None, max_items=10)
 
 
 class DashboardResponse(BaseModel):
     """Dashboard response"""
     id: str
     name: str
-    description: Optional[str] = None
-    widgets: List[WidgetResponse] = []
+    description: str | None = None
+    widgets: list[WidgetResponse] = []
     is_public: bool = False
-    tags: List[str] = []
+    tags: list[str] = []
     created_at: datetime
     updated_at: datetime
-    share_url: Optional[str] = None
+    share_url: str | None = None
     
     class Config:
         from_attributes = True

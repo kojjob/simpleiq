@@ -4,44 +4,45 @@ Data source schemas
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field
 
 
 class DataSourceType(str, Enum):
     """Supported data source types"""
-    GOOGLE_SHEETS = "google_sheets"
-    CSV = "csv"
-    REST_API = "rest_api"
-    MYSQL = "mysql"
     POSTGRESQL = "postgresql"
-    EXCEL = "excel"
+    MYSQL = "mysql"
+    SQLITE = "sqlite"
+    MONGODB = "mongodb"
+    BIGQUERY = "bigquery"
+    SNOWFLAKE = "snowflake"
+    REST_API = "rest_api"
+    CSV = "csv"
+    GOOGLE_SHEETS = "google_sheets"
 
 
 class DataSourceStatus(str, Enum):
     """Data source connection status"""
-    ACTIVE = "active"
-    PENDING = "pending"
-    ERROR = "error"
-    SYNCING = "syncing"
+    CONNECTED = "connected"
     DISCONNECTED = "disconnected"
+    TESTING = "testing"
+    ERROR = "error"
 
 
 class GoogleSheetsConfig(BaseModel):
     """Google Sheets specific configuration"""
     spreadsheet_id: str = Field(..., description="Google Sheets spreadsheet ID")
-    sheet_name: Optional[str] = Field(None, description="Specific sheet name")
-    range: Optional[str] = Field(None, description="Cell range (e.g., A1:Z100)")
+    sheet_name: str | None = Field(None, description="Specific sheet name")
+    range: str | None = Field(None, description="Cell range (e.g., A1:Z100)")
 
 
 class RestAPIConfig(BaseModel):
     """REST API specific configuration"""
     url: str = Field(..., description="API endpoint URL")
     method: str = Field(default="GET", pattern="^(GET|POST|PUT|DELETE)$")
-    headers: Optional[Dict[str, str]] = None
-    auth_type: Optional[str] = Field(None, pattern="^(none|basic|bearer|api_key)$")
-    auth_credentials: Optional[Dict[str, str]] = None
+    headers: dict[str, str] | None = None
+    auth_type: str | None = Field(None, pattern="^(none|basic|bearer|api_key)$")
+    auth_credentials: dict[str, str] | None = None
 
 
 class DatabaseConfig(BaseModel):
@@ -51,31 +52,49 @@ class DatabaseConfig(BaseModel):
     database: str
     username: str
     password: str
-    table: Optional[str] = None
-    query: Optional[str] = None
+    table: str | None = None
+    query: str | None = None
+
+
+class TableInfo(BaseModel):
+    """Table information"""
+    name: str
+    rows: int
+    size: str
+
+
+class ConnectionTestResponse(BaseModel):
+    """Connection test response"""
+    success: bool
+    message: str
+    tables_count: int | None = None
+    size: str | None = None
+    tables: list[TableInfo] | None = None
 
 
 class DataSourceCreate(BaseModel):
     """Create data source request"""
     name: str = Field(..., min_length=1, max_length=100)
     type: DataSourceType
-    config: Dict[str, Any]
-    description: Optional[str] = Field(None, max_length=500)
-    sync_frequency: Optional[str] = Field(
-        default="manual",
-        pattern="^(manual|hourly|daily|weekly|realtime)$"
-    )
+    host: str | None = None
+    port: int | None = None
+    database: str | None = None
+    username: str | None = None
+    password: str | None = None
+    connection_string: str | None = None
+    description: str | None = Field(None, max_length=500)
 
 
 class DataSourceUpdate(BaseModel):
     """Update data source request"""
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
-    config: Optional[Dict[str, Any]] = None
-    description: Optional[str] = Field(None, max_length=500)
-    sync_frequency: Optional[str] = Field(
-        None,
-        pattern="^(manual|hourly|daily|weekly|realtime)$"
-    )
+    name: str | None = Field(None, min_length=1, max_length=100)
+    host: str | None = None
+    port: int | None = None
+    database: str | None = None
+    username: str | None = None
+    password: str | None = None
+    connection_string: str | None = None
+    description: str | None = Field(None, max_length=500)
 
 
 class DataSourceResponse(BaseModel):
@@ -84,11 +103,18 @@ class DataSourceResponse(BaseModel):
     name: str
     type: DataSourceType
     status: DataSourceStatus
-    description: Optional[str] = None
-    sync_frequency: str = "manual"
-    last_sync: Optional[datetime] = None
+    host: str | None = None
+    port: int | None = None
+    database: str | None = None
+    username: str | None = None
+    connection_string: str | None = None
+    description: str | None = None
+    tables_count: int | None = None
+    size: str | None = None
+    last_connected: datetime | None = None
     created_at: datetime
-    updated_at: Optional[datetime] = None
+    updated_at: datetime | None = None
+    tables: list[TableInfo] | None = None
     
     class Config:
         from_attributes = True

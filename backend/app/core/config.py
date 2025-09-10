@@ -2,7 +2,7 @@
 Application configuration using Pydantic Settings
 """
 
-from typing import Any, List, Optional, Union
+from typing import Any
 
 from pydantic import AnyHttpUrl, Field, PostgresDsn, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -29,14 +29,21 @@ class Settings(BaseSettings):
     # API
     API_V1_PREFIX: str = "/api/v1"
     PROJECT_NAME: str = "SimpleIQ API"
-    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
+    BACKEND_CORS_ORIGINS: list[AnyHttpUrl] = [
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+        "http://127.0.0.1:3000",
+    ]
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
-    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
+    def assemble_cors_origins(cls, v: str | list[str]) -> list[str] | str:
         if isinstance(v, str) and not v.startswith("["):
             return [i.strip() for i in v.split(",")]
-        elif isinstance(v, (list, str)):
+        if isinstance(v, (list, str)):
             return v
         raise ValueError(v)
 
@@ -51,14 +58,14 @@ class Settings(BaseSettings):
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_DB: str = "simpleiq"
-    DATABASE_URL: Optional[PostgresDsn] = None
+    DATABASE_URL: PostgresDsn | None = None
     DATABASE_POOL_SIZE: int = 20
     DATABASE_MAX_OVERFLOW: int = 40
     DATABASE_POOL_TIMEOUT: int = 30
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
-    def assemble_db_connection(cls, v: Optional[str], values: dict[str, Any]) -> Any:
+    def assemble_db_connection(cls, v: str | None, values: dict[str, Any]) -> Any:
         if isinstance(v, str):
             return v
         return PostgresDsn.build(
@@ -78,7 +85,7 @@ class Settings(BaseSettings):
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
-    REDIS_PASSWORD: Optional[str] = None
+    REDIS_PASSWORD: str | None = None
     REDIS_DB: int = 0
 
     # Celery
@@ -86,39 +93,39 @@ class Settings(BaseSettings):
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/2"
 
     # AI/ML
-    LLAMA_MODEL_PATH: Optional[str] = None
-    OPENAI_API_KEY: Optional[str] = None
+    LLAMA_MODEL_PATH: str | None = None
+    OPENAI_API_KEY: str | None = None
     MAX_TOKENS: int = 2000
     TEMPERATURE: float = 0.7
 
     # Google Sheets
-    GOOGLE_SERVICE_ACCOUNT_FILE: Optional[str] = None
-    GOOGLE_SCOPES: List[str] = [
+    GOOGLE_SERVICE_ACCOUNT_FILE: str | None = None
+    GOOGLE_SCOPES: list[str] = [
         "https://www.googleapis.com/auth/spreadsheets.readonly",
         "https://www.googleapis.com/auth/drive.readonly",
     ]
 
     # AWS
-    AWS_ACCESS_KEY_ID: Optional[str] = None
-    AWS_SECRET_ACCESS_KEY: Optional[str] = None
+    AWS_ACCESS_KEY_ID: str | None = None
+    AWS_SECRET_ACCESS_KEY: str | None = None
     AWS_REGION: str = "us-east-1"
-    S3_BUCKET_NAME: Optional[str] = None
+    S3_BUCKET_NAME: str | None = None
 
     # Stripe
-    STRIPE_SECRET_KEY: Optional[str] = None
-    STRIPE_PUBLISHABLE_KEY: Optional[str] = None
-    STRIPE_WEBHOOK_SECRET: Optional[str] = None
+    STRIPE_SECRET_KEY: str | None = None
+    STRIPE_PUBLISHABLE_KEY: str | None = None
+    STRIPE_WEBHOOK_SECRET: str | None = None
 
     # Email
-    SMTP_HOST: Optional[str] = None
-    SMTP_PORT: Optional[int] = 587
-    SMTP_USER: Optional[str] = None
-    SMTP_PASSWORD: Optional[str] = None
-    EMAILS_FROM_EMAIL: Optional[str] = None
-    EMAILS_FROM_NAME: Optional[str] = None
+    SMTP_HOST: str | None = None
+    SMTP_PORT: int | None = 587
+    SMTP_USER: str | None = None
+    SMTP_PASSWORD: str | None = None
+    EMAILS_FROM_EMAIL: str | None = None
+    EMAILS_FROM_NAME: str | None = None
 
     # Monitoring
-    SENTRY_DSN: Optional[str] = None
+    SENTRY_DSN: str | None = None
     PROMETHEUS_PORT: int = 9090
 
     # Rate Limiting
@@ -130,9 +137,6 @@ class Settings(BaseSettings):
     ENABLE_SIGNUP: bool = True
     ENABLE_AI_FEATURES: bool = True
     ENABLE_PREMIUM_FEATURES: bool = False
-
-    class Config:
-        case_sensitive = True
 
 
 # Create settings instance

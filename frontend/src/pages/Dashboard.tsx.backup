@@ -1,0 +1,520 @@
+import React, { useState, useEffect } from 'react';
+import { Card, Row, Col, Statistic, Typography, Progress, Space, Badge, Table, Tag, Avatar, List } from 'antd';
+import { 
+  DatabaseOutlined, 
+  ClockCircleOutlined, 
+  CheckCircleOutlined, 
+  ChartOutlined,
+  ArrowUpOutlined,
+  ArrowDownOutlined,
+  ThunderboltOutlined,
+  CloudServerOutlined,
+  RiseOutlined,
+  FundProjectionScreenOutlined,
+  UserOutlined,
+  SyncOutlined,
+  ApiOutlined,
+  DashboardOutlined
+} from '@ant-design/icons';
+import { 
+  LineChart, 
+  Line, 
+  AreaChart, 
+  Area, 
+  BarChart, 
+  Bar, 
+  PieChart, 
+  Pie, 
+  Cell,
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer,
+  RadialBarChart,
+  RadialBar,
+  ComposedChart
+} from 'recharts';
+
+const { Title, Paragraph, Text } = Typography;
+
+// Mock data for charts
+const queryPerformanceData = [
+  { time: '00:00', queries: 120, responseTime: 0.3, errors: 2 },
+  { time: '04:00', queries: 80, responseTime: 0.25, errors: 1 },
+  { time: '08:00', queries: 200, responseTime: 0.4, errors: 3 },
+  { time: '12:00', queries: 350, responseTime: 0.5, errors: 5 },
+  { time: '16:00', queries: 320, responseTime: 0.45, errors: 4 },
+  { time: '20:00', queries: 280, responseTime: 0.35, errors: 2 },
+  { time: '23:59', queries: 150, responseTime: 0.3, errors: 1 },
+];
+
+const databaseUsageData = [
+  { name: 'PostgreSQL', value: 45, color: '#336791' },
+  { name: 'MySQL', value: 30, color: '#00758F' },
+  { name: 'MongoDB', value: 15, color: '#47A248' },
+  { name: 'Redis', value: 10, color: '#DC382D' },
+];
+
+const dataSourceHealth = [
+  { name: 'Production DB', status: 'healthy', latency: 12, uptime: 99.9 },
+  { name: 'Analytics DB', status: 'healthy', latency: 25, uptime: 99.5 },
+  { name: 'Cache Server', status: 'warning', latency: 45, uptime: 98.2 },
+  { name: 'Backup DB', status: 'healthy', latency: 30, uptime: 99.8 },
+];
+
+const recentQueries = [
+  { 
+    id: 1, 
+    query: 'SELECT * FROM users WHERE created_at > now() - interval \'1 day\'', 
+    user: 'John Doe',
+    time: '2 min ago', 
+    duration: '0.23s', 
+    status: 'success',
+    rows: 1542
+  },
+  { 
+    id: 2, 
+    query: 'UPDATE products SET price = price * 1.1 WHERE category = \'electronics\'', 
+    user: 'Jane Smith',
+    time: '5 min ago', 
+    duration: '1.45s', 
+    status: 'success',
+    rows: 328
+  },
+  { 
+    id: 3, 
+    query: 'DELETE FROM logs WHERE created_at < now() - interval \'30 days\'', 
+    user: 'Admin',
+    time: '8 min ago', 
+    duration: '3.21s', 
+    status: 'warning',
+    rows: 15420
+  },
+  { 
+    id: 4, 
+    query: 'SELECT COUNT(*) FROM orders WHERE status = \'pending\'', 
+    user: 'Mike Johnson',
+    time: '12 min ago', 
+    duration: '0.12s', 
+    status: 'success',
+    rows: 1
+  },
+];
+
+const weeklyStats = [
+  { day: 'Mon', queries: 1200, users: 45 },
+  { day: 'Tue', queries: 1350, users: 52 },
+  { day: 'Wed', queries: 1420, users: 48 },
+  { day: 'Thu', queries: 1580, users: 61 },
+  { day: 'Fri', queries: 1890, users: 73 },
+  { day: 'Sat', queries: 920, users: 32 },
+  { day: 'Sun', queries: 780, users: 28 },
+];
+
+const Dashboard: React.FC = () => {
+  const [activeUsers, setActiveUsers] = useState(8);
+  const [totalQueries, setTotalQueries] = useState(1542);
+  const [cpuUsage, setCpuUsage] = useState(45);
+  const [memoryUsage, setMemoryUsage] = useState(62);
+
+  // Simulate real-time updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveUsers(prev => Math.max(1, prev + Math.floor(Math.random() * 3 - 1)));
+      setTotalQueries(prev => prev + Math.floor(Math.random() * 5));
+      setCpuUsage(prev => Math.min(100, Math.max(20, prev + Math.floor(Math.random() * 10 - 5))));
+      setMemoryUsage(prev => Math.min(100, Math.max(30, prev + Math.floor(Math.random() * 8 - 4))));
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const columns = [
+    {
+      title: 'User',
+      dataIndex: 'user',
+      key: 'user',
+      width: '15%',
+      render: (text: string) => (
+        <Space>
+          <Avatar size="small" icon={<UserOutlined />} />
+          <Text>{text}</Text>
+        </Space>
+      ),
+    },
+    {
+      title: 'Query',
+      dataIndex: 'query',
+      key: 'query',
+      ellipsis: true,
+      width: '35%',
+      render: (text: string) => (
+        <Text code style={{ fontSize: '11px' }}>{text.substring(0, 60)}...</Text>
+      ),
+    },
+    {
+      title: 'Time',
+      dataIndex: 'time',
+      key: 'time',
+      width: '15%',
+    },
+    {
+      title: 'Duration',
+      dataIndex: 'duration',
+      key: 'duration',
+      width: '15%',
+      render: (duration: string) => (
+        <Tag color={parseFloat(duration) > 1 ? 'orange' : 'green'}>
+          {duration}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Rows',
+      dataIndex: 'rows',
+      key: 'rows',
+      width: '10%',
+      render: (rows: number) => rows.toLocaleString(),
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      width: '10%',
+      render: (status: string) => (
+        <Badge 
+          status={status === 'success' ? 'success' : status === 'warning' ? 'warning' : 'error'} 
+          text={status.charAt(0).toUpperCase() + status.slice(1)}
+        />
+      ),
+    },
+  ];
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div style={{ backgroundColor: '#fff', padding: '10px', border: '1px solid #ccc', borderRadius: '4px' }}>
+          <p style={{ margin: 0, fontWeight: 'bold' }}>{label}</p>
+          {payload.map((entry: any, index: number) => (
+            <p key={index} style={{ margin: '5px 0', color: entry.color }}>
+              {entry.name}: {entry.value}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  return (
+    <div style={{ padding: '24px', backgroundColor: '#f0f2f5', minHeight: '100vh' }}>
+      <div style={{ marginBottom: '24px' }}>
+        <Title level={2} style={{ marginBottom: '8px' }}>
+          <DashboardOutlined /> Analytics Dashboard
+        </Title>
+        <Paragraph type="secondary">
+          Real-time monitoring and analytics for your data infrastructure
+        </Paragraph>
+      </div>
+      
+      {/* Key Metrics */}
+      <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card hoverable style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+            <Statistic
+              title={<Text style={{ color: '#fff' }}>Connected Databases</Text>}
+              value={4}
+              prefix={<DatabaseOutlined style={{ color: '#fff' }} />}
+              valueStyle={{ color: '#fff' }}
+              suffix={
+                <Text type="success" style={{ fontSize: '14px', color: '#fff' }}>
+                  <ArrowUpOutlined /> 33%
+                </Text>
+              }
+            />
+            <Progress percent={100} strokeColor="#fff" trailColor="rgba(255,255,255,0.3)" showInfo={false} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card hoverable style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
+            <Statistic
+              title={<Text style={{ color: '#fff' }}>Total Queries Today</Text>}
+              value={totalQueries}
+              prefix={<ChartOutlined style={{ color: '#fff' }} />}
+              valueStyle={{ color: '#fff' }}
+              suffix={
+                <Text style={{ fontSize: '14px', color: '#fff' }}>
+                  <ArrowUpOutlined /> 12%
+                </Text>
+              }
+            />
+            <Progress percent={75} strokeColor="#fff" trailColor="rgba(255,255,255,0.3)" showInfo={false} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card hoverable style={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}>
+            <Badge count={activeUsers} style={{ backgroundColor: '#52c41a' }}>
+              <Statistic
+                title={<Text style={{ color: '#fff' }}>Active Users</Text>}
+                value={activeUsers}
+                prefix={<CheckCircleOutlined style={{ color: '#fff' }} />}
+                valueStyle={{ color: '#fff' }}
+              />
+            </Badge>
+            <Progress percent={80} strokeColor="#fff" trailColor="rgba(255,255,255,0.3)" showInfo={false} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card hoverable style={{ background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' }}>
+            <Statistic
+              title={<Text style={{ color: '#fff' }}>Avg Response Time</Text>}
+              value={0.35}
+              suffix="s"
+              prefix={<ThunderboltOutlined style={{ color: '#fff' }} />}
+              valueStyle={{ color: '#fff' }}
+              precision={2}
+            />
+            <Progress percent={95} strokeColor="#fff" trailColor="rgba(255,255,255,0.3)" showInfo={false} />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* System Performance */}
+      <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+        <Col xs={24} lg={8}>
+          <Card title="System Resources" hoverable>
+            <Space direction="vertical" style={{ width: '100%' }} size="large">
+              <div>
+                <Text>CPU Usage</Text>
+                <Progress 
+                  percent={cpuUsage} 
+                  strokeColor={{
+                    '0%': '#108ee9',
+                    '100%': '#87d068',
+                  }}
+                  status="active"
+                />
+              </div>
+              <div>
+                <Text>Memory Usage</Text>
+                <Progress 
+                  percent={memoryUsage} 
+                  strokeColor={{
+                    '0%': '#108ee9',
+                    '100%': '#87d068',
+                  }}
+                  status="active"
+                />
+              </div>
+              <div>
+                <Text>Disk Usage</Text>
+                <Progress 
+                  percent={38} 
+                  strokeColor="#52c41a"
+                />
+              </div>
+              <div>
+                <Text>Network I/O</Text>
+                <Progress 
+                  percent={55} 
+                  strokeColor="#1890ff"
+                />
+              </div>
+            </Space>
+          </Card>
+        </Col>
+
+        <Col xs={24} lg={16}>
+          <Card 
+            title={
+              <Space>
+                <RiseOutlined />
+                <Text strong>Query Performance Timeline</Text>
+                <Badge status="processing" text="Live" />
+              </Space>
+            }
+            hoverable
+          >
+            <ResponsiveContainer width="100%" height={250}>
+              <ComposedChart data={queryPerformanceData}>
+                <defs>
+                  <linearGradient id="colorQueries" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#1890ff" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#1890ff" stopOpacity={0.1}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="time" />
+                <YAxis yAxisId="left" />
+                <YAxis yAxisId="right" orientation="right" />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+                <Area 
+                  yAxisId="left" 
+                  type="monotone" 
+                  dataKey="queries" 
+                  stroke="#1890ff" 
+                  fillOpacity={1} 
+                  fill="url(#colorQueries)" 
+                  name="Queries"
+                  strokeWidth={2}
+                />
+                <Line 
+                  yAxisId="right" 
+                  type="monotone" 
+                  dataKey="responseTime" 
+                  stroke="#52c41a" 
+                  name="Response Time (s)"
+                  strokeWidth={2}
+                  dot={{ fill: '#52c41a', r: 4 }}
+                />
+                <Bar 
+                  yAxisId="left" 
+                  dataKey="errors" 
+                  fill="#ff4d4f" 
+                  name="Errors"
+                  opacity={0.7}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Charts Row */}
+      <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+        <Col xs={24} lg={12}>
+          <Card 
+            title={
+              <Space>
+                <ApiOutlined />
+                <Text strong>Weekly Statistics</Text>
+              </Space>
+            }
+            hoverable
+          >
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={weeklyStats}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="day" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="queries" fill="#1890ff" name="Queries" />
+                <Bar dataKey="users" fill="#52c41a" name="Active Users" />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+        </Col>
+        
+        <Col xs={24} lg={12}>
+          <Card 
+            title={
+              <Space>
+                <CloudServerOutlined />
+                <Text strong>Database Usage Distribution</Text>
+              </Space>
+            }
+            hoverable
+          >
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie
+                  data={databaseUsageData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {databaseUsageData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Data Source Health & Recent Queries */}
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={10}>
+          <Card 
+            title={
+              <Space>
+                <DatabaseOutlined />
+                <Text strong>Data Source Health</Text>
+                <SyncOutlined spin style={{ color: '#1890ff' }} />
+              </Space>
+            }
+            hoverable
+          >
+            <List
+              dataSource={dataSourceHealth}
+              renderItem={(source) => (
+                <List.Item>
+                  <Card size="small" style={{ width: '100%', backgroundColor: '#fafafa' }}>
+                    <Row align="middle">
+                      <Col span={12}>
+                        <Space>
+                          <Badge 
+                            status={source.status === 'healthy' ? 'success' : 'warning'} 
+                          />
+                          <Text strong>{source.name}</Text>
+                        </Space>
+                      </Col>
+                      <Col span={6}>
+                        <Text type="secondary">
+                          <ClockCircleOutlined /> {source.latency}ms
+                        </Text>
+                      </Col>
+                      <Col span={6}>
+                        <div style={{ textAlign: 'right' }}>
+                          <Text type="secondary" style={{ fontSize: '12px' }}>Uptime</Text>
+                          <Progress 
+                            percent={source.uptime} 
+                            size="small" 
+                            strokeColor={source.uptime > 99 ? '#52c41a' : '#faad14'}
+                            format={(percent) => `${percent}%`}
+                          />
+                        </div>
+                      </Col>
+                    </Row>
+                  </Card>
+                </List.Item>
+              )}
+            />
+          </Card>
+        </Col>
+        
+        <Col xs={24} lg={14}>
+          <Card 
+            title={
+              <Space>
+                <ClockCircleOutlined />
+                <Text strong>Recent Query Activity</Text>
+                <Badge count={recentQueries.length} style={{ backgroundColor: '#52c41a' }} />
+              </Space>
+            }
+            hoverable
+          >
+            <Table 
+              columns={columns} 
+              dataSource={recentQueries} 
+              pagination={false}
+              size="small"
+              scroll={{ x: 800 }}
+            />
+          </Card>
+        </Col>
+      </Row>
+    </div>
+  );
+};
+
+export default Dashboard;

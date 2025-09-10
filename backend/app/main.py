@@ -2,15 +2,19 @@
 FastAPI application entry point for SimpleIQ Backend
 """
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator
+from datetime import datetime
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
-from app.api.v1 import auth, data, queries, dashboards
+# Import models to register them with SQLAlchemy
+import app.models
+from app.api.v1 import auth, dashboards, data, data_sources, queries
 from app.core.config import settings
 from app.core.database import create_db_tables
 
@@ -45,9 +49,11 @@ app = FastAPI(
 )
 
 # Add middleware
+cors_origins = [str(origin).rstrip("/") for origin in settings.BACKEND_CORS_ORIGINS]
+print(f"CORS Origins configured: {cors_origins}")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.BACKEND_CORS_ORIGINS,
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -72,6 +78,11 @@ app.include_router(
     prefix=f"{settings.API_V1_PREFIX}/dashboards",
     tags=["dashboards"],
 )
+app.include_router(
+    data_sources.router,
+    prefix=f"{settings.API_V1_PREFIX}/data-sources",
+    tags=["data-sources"],
+)
 
 
 @app.get("/")
@@ -95,4 +106,5 @@ async def health_check() -> dict[str, Any]:
         "status": "healthy",
         "version": settings.APP_VERSION,
         "environment": settings.ENVIRONMENT,
+        "timestamp": datetime.utcnow().isoformat(),
     }
