@@ -6,15 +6,13 @@ Production-ready with security, validation, and performance optimizations
 import hashlib
 import io
 import os
-from datetime import datetime
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, ClassVar
+
 import chardet
 import magic
 import pandas as pd
 
 from app.connectors.base import BaseConnector
-from app.models.data_source import ConnectionStatus, ProcessingStatus
 
 
 class CSVConnector(BaseConnector):
@@ -24,23 +22,27 @@ class CSVConnector(BaseConnector):
     """
     
     # Security constants
-    MAX_FILE_SIZE = 500 * 1024 * 1024  # 500MB
-    ALLOWED_MIME_TYPES = ['text/csv', 'text/plain', 'application/csv']
-    CHUNK_SIZE = 10000  # Rows to process at a time for large files
+    MAX_FILE_SIZE: ClassVar[int] = 500 * 1024 * 1024  # 500MB
+    ALLOWED_MIME_TYPES: ClassVar[list[str]] = ["text/csv", "text/plain", "application/csv"]
+    CHUNK_SIZE: ClassVar[int] = 10000  # Rows to process at a time for large files
     
     # Validation constants
-    MIN_ROWS = 1
-    MAX_COLUMNS = 1000
-    MAX_COLUMN_NAME_LENGTH = 255
+    MIN_ROWS: ClassVar[int] = 1
+    MAX_COLUMNS: ClassVar[int] = 1000
+    MAX_COLUMN_NAME_LENGTH: ClassVar[int] = 255
+    
+    # Quality thresholds
+    MIN_CONFIDENCE_THRESHOLD: ClassVar[float] = 0.7
+    MIN_QUALITY_THRESHOLD: ClassVar[float] = 0.3
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.file_path = self.data_source.file_path
-        self.df: Optional[pd.DataFrame] = None
-        self._file_hash: Optional[str] = None
-        self._encoding: Optional[str] = None
+        self.df: pd.DataFrame | None = None
+        self._file_hash: str | None = None
+        self._encoding: str | None = None
     
-    async def validate_file_security(self, file_content: bytes) -> Tuple[bool, Optional[str]]:
+    async def validate_file_security(self, file_content: bytes) -> tuple[bool, str | None]:
         """
         Validate file security: size, type, content
         
@@ -68,14 +70,14 @@ class CSVConnector(BaseConnector):
         
         # Detect encoding
         detection = chardet.detect(file_content[:10000])  # Check first 10KB
-        self._encoding = detection.get('encoding', 'utf-8')
+        self._encoding = detection.get("encoding", "utf-8")
         
-        if detection.get('confidence', 0) < 0.7:
+        if detection.get("confidence", 0) < self.MIN_CONFIDENCE_THRESHOLD:
             self.logger.warning(f"Low confidence in encoding detection: {detection}")
         
         return True, None
     
-    async def validate_connection(self) -> Tuple[bool, Optional[str]]:
+    async def validate_connection(self) -> tuple[bool, str | None]:
         """
         Validate CSV file can be read and parsed
         
@@ -90,20 +92,20 @@ class CSVConnector(BaseConnector):
             self.df = pd.read_csv(
                 self.file_path,
                 nrows=5,
-                encoding=self._encoding or 'utf-8',
-                on_bad_lines='skip'
+                encoding=self._encoding or "utf-8",
+                on_bad_lines="skip"
             )
             
             if self.df.empty:
                 return False, "CSV file appears to be empty"
             
-            return True, None
-            
         except Exception as e:
-            self.logger.error(f"Failed to validate CSV connection: {str(e)}")
-            return False, f"Failed to read CSV: {str(e)}"
+            self.logger.exception(f"Failed to validate CSV connection: {e!s}")
+            return False, f"Failed to read CSV: {e!s}"
+        else:
+            return True, None
     
-    async def fetch_schema(self) -> Dict[str, Any]:
+    async def fetch_schema(self) -> dict[str, Any]:
         """
         Analyze CSV file and extract schema information
         
@@ -114,8 +116,8 @@ class CSVConnector(BaseConnector):
             # Read the full file if not already loaded
             self.df = pd.read_csv(
                 self.file_path,
-                encoding=self._encoding or 'utf-8',
-                on_bad_lines='skip',
+                encoding=self._encoding or "utf-8",
+                on_bad_lines="skip",
                 low_memory=False
             )
         
@@ -133,10 +135,10 @@ class CSVConnector(BaseConnector):
                 "name": self.sanitize_column_name(str(col)),
                 "original_name": str(col),
                 "type": self.infer_column_type(self.df[col]),
-                "nullable": self.df[col].isnull().any(),
+                "nullable": self.df[col].isna().any(),
                 "unique_count": self.df[col].nunique(),
-                "null_count": self.df[col].isnull().sum(),
-                "null_percentage": (self.df[col].isnull().sum() / len(self.df)) * 100 if len(self.df) > 0 else 0
+                "null_count": self.df[col].isna().sum(),
+                "null_percentage": (self.df[col].isna().sum() / len(self.df)) * 100 if len(self.df) > 0 else 0
             }
             
             # Add statistics for numeric columns
@@ -160,10 +162,10 @@ class CSVConnector(BaseConnector):
     
     async def fetch_data(
         self,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
-        filters: Optional[Dict[str, Any]] = None
-    ) -> List[Dict[str, Any]]:
+        limit: int | None = None,
+        offset: int | None = None,
+        filters: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
         """
         Fetch data from CSV file
         
@@ -178,8 +180,8 @@ class CSVConnector(BaseConnector):
         if self.df is None:
             self.df = pd.read_csv(
                 self.file_path,
-                encoding=self._encoding or 'utf-8',
-                on_bad_lines='skip',
+                encoding=self._encoding or "utf-8",
+                on_bad_lines="skip",
                 low_memory=False
             )
         
@@ -190,7 +192,7 @@ class CSVConnector(BaseConnector):
         subset = self.df.iloc[start_idx:end_idx]
         
         # Convert to list of dictionaries, handling NaN values
-        return subset.where(pd.notnull(subset), None).to_dict('records')
+        return subset.where(pd.notna(subset), None).to_dict("records")
     
     async def count_rows(self) -> int:
         """
@@ -205,15 +207,15 @@ class CSVConnector(BaseConnector):
             for chunk in pd.read_csv(
                 self.file_path,
                 chunksize=self.CHUNK_SIZE,
-                encoding=self._encoding or 'utf-8',
-                on_bad_lines='skip'
+                encoding=self._encoding or "utf-8",
+                on_bad_lines="skip"
             ):
                 row_count += len(chunk)
             return row_count
         
         return len(self.df)
     
-    async def validate_data(self, data: List[Dict[str, Any]] = None) -> Tuple[bool, List[str]]:
+    async def validate_data(self, data: list[dict[str, Any]] | None = None) -> tuple[bool, list[str]]:
         """
         Comprehensive data validation
         
@@ -256,7 +258,7 @@ class CSVConnector(BaseConnector):
         
         # Check data quality score
         quality_score = self.calculate_quality_score(df_to_validate)
-        if quality_score < 0.3:  # Less than 30% quality
+        if quality_score < self.MIN_QUALITY_THRESHOLD:  # Less than 30% quality
             errors.append(f"Data quality score is too low: {quality_score:.2%}")
         
         return len(errors) == 0, errors
@@ -279,23 +281,24 @@ class CSVConnector(BaseConnector):
         
         # Try to convert to numeric
         try:
-            pd.to_numeric(non_null, errors='raise')
-            if non_null.dtype == 'int64' or (non_null == non_null.astype(int)).all():
+            pd.to_numeric(non_null, errors="raise")
+            if non_null.dtype == "int64" or (non_null == non_null.astype(int)).all():
                 return "INTEGER"
-            else:
-                return "FLOAT"
-        except:
+        except (ValueError, TypeError):
             pass
+        else:
+            return "FLOAT"
         
         # Try to convert to datetime
         try:
-            pd.to_datetime(non_null, errors='raise')
-            return "TIMESTAMP"
-        except:
+            pd.to_datetime(non_null, errors="raise")
+        except (ValueError, TypeError):
             pass
+        else:
+            return "TIMESTAMP"
         
         # Try to convert to boolean
-        if set(non_null.unique()).issubset({True, False, 1, 0, '1', '0', 'true', 'false', 'True', 'False'}):
+        if set(non_null.unique()).issubset({True, False, "1", "0", "true", "false", "True", "False"}):
             return "BOOLEAN"
         
         # Default to string
@@ -317,13 +320,13 @@ class CSVConnector(BaseConnector):
         scores = []
         
         # Completeness score (percentage of non-null values)
-        completeness = 1 - (df.isnull().sum().sum() / (len(df) * len(df.columns)))
+        completeness = 1 - (df.isna().sum().sum() / (len(df) * len(df.columns)))
         scores.append(completeness)
         
         # Uniqueness score (for columns that should be unique)
         # This is a simplified check - in production, you'd have metadata about which columns should be unique
         if len(df) > 1:
-            potential_id_cols = [col for col in df.columns if 'id' in str(col).lower()]
+            potential_id_cols = [col for col in df.columns if "id" in str(col).lower()]
             if potential_id_cols:
                 uniqueness_scores = [df[col].nunique() / len(df) for col in potential_id_cols]
                 scores.append(max(uniqueness_scores) if uniqueness_scores else 0.5)
@@ -333,9 +336,9 @@ class CSVConnector(BaseConnector):
         for col in df.columns:
             try:
                 # If we can convert to numeric without errors, it's consistent
-                pd.to_numeric(df[col], errors='raise')
+                pd.to_numeric(df[col], errors="raise")
                 consistency_scores.append(1.0)
-            except:
+            except (ValueError, TypeError):
                 # Check if it's consistently string or mixed
                 non_null = df[col].dropna()
                 if len(non_null) > 0:
@@ -353,7 +356,7 @@ class CSVConnector(BaseConnector):
         file_content: bytes,
         file_name: str,
         job_id: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Process uploaded CSV file
         
@@ -382,8 +385,8 @@ class CSVConnector(BaseConnector):
             # Parse CSV
             self.df = pd.read_csv(
                 io.BytesIO(file_content),
-                encoding=self._encoding or 'utf-8',
-                on_bad_lines='skip',
+                encoding=self._encoding or "utf-8",
+                on_bad_lines="skip",
                 low_memory=False
             )
             
@@ -403,9 +406,9 @@ class CSVConnector(BaseConnector):
                 "quality_score": self.calculate_quality_score(self.df)
             })
             
-            return result
-            
         except Exception as e:
-            self.logger.error(f"Failed to process CSV file: {str(e)}")
-            result["errors"].append(f"Processing error: {str(e)}")
+            self.logger.exception(f"Failed to process CSV file: {e!s}")
+            result["errors"].append(f"Processing error: {e!s}")
+            return result
+        else:
             return result

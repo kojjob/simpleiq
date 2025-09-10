@@ -7,15 +7,22 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import JWTError
-from jose import jwt
+from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import create_access_token, create_refresh_token, verify_password, verify_token
-from app.models.schemas.auth import Token, TokenData, UserCreate, UserResponse, RefreshTokenRequest
-from app.models.schemas.user import User
+from app.core.security import (
+    create_access_token,
+    create_refresh_token,
+    verify_token,
+)
+from app.models.schemas.auth import (
+    RefreshTokenRequest,
+    Token,
+    UserCreate,
+    UserResponse,
+)
 from app.services.user_service import UserService
 
 router = APIRouter()

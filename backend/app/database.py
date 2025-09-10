@@ -4,7 +4,8 @@ Sync Database configuration for data source connections
 
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import Session, sessionmaker
+
 from app.core.config import settings
 
 # Create sync engine for data source operations

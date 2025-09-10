@@ -3,6 +3,7 @@ Test health endpoint to verify CI/CD pipeline
 """
 import pytest
 from fastapi.testclient import TestClient
+
 from app.main import app
 
 

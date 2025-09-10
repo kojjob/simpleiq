@@ -3,7 +3,7 @@ Query-related schemas
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 class QueryRequest(BaseModel):
     """Natural language query request"""
     query: str = Field(..., min_length=1, max_length=500, description="Natural language query")
-    data_source_id: Optional[str] = Field(None, description="Specific data source to query")
+    data_source_id: str | None = Field(None, description="Specific data source to query")
     limit: int = Field(default=100, ge=1, le=1000, description="Maximum rows to return")
     timeout_seconds: int = Field(default=30, ge=1, le=300, description="Query timeout")
     include_insights: bool = Field(default=True, description="Include AI-generated insights")
@@ -19,8 +19,8 @@ class QueryRequest(BaseModel):
 
 class QueryResult(BaseModel):
     """Query execution result"""
-    columns: List[str]
-    rows: List[List[Any]]
+    columns: list[str]
+    rows: list[list[Any]]
     row_count: int
     truncated: bool = False
 
@@ -30,11 +30,11 @@ class QueryResponse(BaseModel):
     success: bool
     query_id: str
     original_query: str
-    sql_generated: Optional[str] = None
-    results: Optional[QueryResult] = None
+    sql_generated: str | None = None
+    results: QueryResult | None = None
     execution_time_ms: int
-    insights: Optional[List[str]] = None
-    error: Optional[str] = None
+    insights: list[str] | None = None
+    error: str | None = None
     
     class Config:
         json_schema_extra = {
@@ -62,8 +62,8 @@ class QueryHistory(BaseModel):
     executed_at: datetime
     execution_time_ms: int
     success: bool
-    data_source_id: Optional[str] = None
-    error: Optional[str] = None
+    data_source_id: str | None = None
+    error: str | None = None
     
     class Config:
         from_attributes = True
@@ -73,7 +73,7 @@ class QueryExplanation(BaseModel):
     """Query explanation response"""
     query: str
     explanation: str
-    data_sources: List[str]
+    data_sources: list[str]
     estimated_execution_time_ms: int
-    potential_insights: List[str]
-    sql_preview: Optional[str] = None
+    potential_insights: list[str]
+    sql_preview: str | None = None

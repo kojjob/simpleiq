@@ -2,8 +2,6 @@
 User service for handling user operations
 """
 
-from typing import Optional
-from uuid import uuid4
 
 from passlib.context import CryptContext
 from sqlalchemy import select
@@ -12,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.schemas.auth import UserCreate
 from app.models.schemas.user import User as UserSchema
 from app.models.user import User as UserModel
-
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -66,14 +63,14 @@ class UserService:
             updated_at=db_user.updated_at
         )
     
-    async def get_by_email(self, email: str) -> Optional[UserModel]:
+    async def get_by_email(self, email: str) -> UserModel | None:
         """Get user by email from database"""
         result = await self.db.execute(
             select(UserModel).where(UserModel.email == email)
         )
         return result.scalar_one_or_none()
     
-    async def authenticate(self, email: str, password: str) -> Optional[UserSchema]:
+    async def authenticate(self, email: str, password: str) -> UserSchema | None:
         """Authenticate a user"""
         user = await self.get_by_email(email)
         if not user:

@@ -2,9 +2,8 @@
 Authentication schemas
 """
 
-from typing import Optional
 
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class Token(BaseModel):
@@ -17,7 +16,7 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     """Token payload data"""
-    email: Optional[str] = None
+    email: str | None = None
 
 
 class RefreshTokenRequest(BaseModel):
@@ -30,7 +29,7 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8, max_length=100)
     full_name: str = Field(..., min_length=1, max_length=100)
-    company_name: Optional[str] = Field(None, max_length=100)
+    company_name: str | None = Field(None, max_length=100)
 
 
 class UserResponse(BaseModel):
@@ -40,5 +39,5 @@ class UserResponse(BaseModel):
     id: str
     email: EmailStr
     full_name: str
-    company_name: Optional[str] = None
+    company_name: str | None = None
     is_active: bool = True

@@ -4,7 +4,6 @@ Script to create database tables for SimpleIQ backend
 """
 
 # Import all models to ensure they're registered with SQLAlchemy
-from app.models.data_source import DataSource
 from app.database import create_tables
 
 if __name__ == "__main__":

@@ -3,14 +3,22 @@ Data source database models for managing connected data sources
 Production-ready with proper async support, validation, and security
 """
 
-from datetime import datetime
 from enum import Enum as PyEnum
-from typing import Optional, Dict, Any
 from uuid import uuid4
 
 from sqlalchemy import (
-    Boolean, Column, DateTime, Enum, ForeignKey, 
-    Integer, JSON, String, Text, UniqueConstraint, Index, Float
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -135,10 +143,10 @@ class DataSource(Base):
     
     # Constraints for data integrity
     __table_args__ = (
-        UniqueConstraint('user_id', 'name', 'is_deleted', name='uq_user_data_source_name'),
-        Index('idx_data_source_user_status', 'user_id', 'status'),
-        Index('idx_data_source_type_status', 'type', 'status'),
-        Index('idx_data_source_sync', 'sync_enabled', 'next_sync_at'),
+        UniqueConstraint("user_id", "name", "is_deleted", name="uq_user_data_source_name"),
+        Index("idx_data_source_user_status", "user_id", "status"),
+        Index("idx_data_source_type_status", "type", "status"),
+        Index("idx_data_source_sync", "sync_enabled", "next_sync_at"),
     )
     
     def __repr__(self) -> str:

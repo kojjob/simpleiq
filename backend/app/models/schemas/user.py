@@ -3,7 +3,6 @@ User model schemas
 """
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, EmailStr
 
@@ -12,7 +11,7 @@ class UserBase(BaseModel):
     """Base user schema"""
     email: EmailStr
     full_name: str
-    company_name: Optional[str] = None
+    company_name: str | None = None
 
 
 class User(UserBase):
@@ -21,7 +20,7 @@ class User(UserBase):
     is_active: bool = True
     is_superuser: bool = False
     created_at: datetime
-    updated_at: Optional[datetime] = None
+    updated_at: datetime | None = None
     
     class Config:
         from_attributes = True

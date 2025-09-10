@@ -2,17 +2,16 @@
 Natural language query API endpoints
 """
 
-from typing import Any, List, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.models.schemas.query import (
+    QueryHistory,
     QueryRequest,
     QueryResponse,
-    QueryHistory,
-    QueryResult,
 )
 
 router = APIRouter()
@@ -62,7 +61,7 @@ async def execute_query(
     }
 
 
-@router.get("/history", response_model=List[QueryHistory])
+@router.get("/history", response_model=list[QueryHistory])
 async def get_query_history(
     db: AsyncSession = Depends(get_db),
     skip: int = 0,
@@ -94,7 +93,7 @@ async def get_query_history(
 
 @router.get("/suggestions")
 async def get_query_suggestions(
-    context: Optional[str] = None,
+    context: str | None = None,
     db: AsyncSession = Depends(get_db),
 ) -> Any:
     """

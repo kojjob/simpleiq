@@ -2,16 +2,14 @@
 Comprehensive tests for authentication system
 """
 
-import json
 from datetime import datetime, timedelta
-from typing import Dict, Any
 
 import pytest
 from fastapi.testclient import TestClient
 from jose import jwt
 
-from app.main import app
 from app.core.config import settings
+from app.main import app
 from app.services.user_service import USERS_DB
 
 

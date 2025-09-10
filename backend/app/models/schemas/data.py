@@ -4,7 +4,6 @@ Data source schemas
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field
 
@@ -33,17 +32,17 @@ class DataSourceStatus(str, Enum):
 class GoogleSheetsConfig(BaseModel):
     """Google Sheets specific configuration"""
     spreadsheet_id: str = Field(..., description="Google Sheets spreadsheet ID")
-    sheet_name: Optional[str] = Field(None, description="Specific sheet name")
-    range: Optional[str] = Field(None, description="Cell range (e.g., A1:Z100)")
+    sheet_name: str | None = Field(None, description="Specific sheet name")
+    range: str | None = Field(None, description="Cell range (e.g., A1:Z100)")
 
 
 class RestAPIConfig(BaseModel):
     """REST API specific configuration"""
     url: str = Field(..., description="API endpoint URL")
     method: str = Field(default="GET", pattern="^(GET|POST|PUT|DELETE)$")
-    headers: Optional[Dict[str, str]] = None
-    auth_type: Optional[str] = Field(None, pattern="^(none|basic|bearer|api_key)$")
-    auth_credentials: Optional[Dict[str, str]] = None
+    headers: dict[str, str] | None = None
+    auth_type: str | None = Field(None, pattern="^(none|basic|bearer|api_key)$")
+    auth_credentials: dict[str, str] | None = None
 
 
 class DatabaseConfig(BaseModel):
@@ -53,8 +52,8 @@ class DatabaseConfig(BaseModel):
     database: str
     username: str
     password: str
-    table: Optional[str] = None
-    query: Optional[str] = None
+    table: str | None = None
+    query: str | None = None
 
 
 class TableInfo(BaseModel):
@@ -68,34 +67,34 @@ class ConnectionTestResponse(BaseModel):
     """Connection test response"""
     success: bool
     message: str
-    tables_count: Optional[int] = None
-    size: Optional[str] = None
-    tables: Optional[list[TableInfo]] = None
+    tables_count: int | None = None
+    size: str | None = None
+    tables: list[TableInfo] | None = None
 
 
 class DataSourceCreate(BaseModel):
     """Create data source request"""
     name: str = Field(..., min_length=1, max_length=100)
     type: DataSourceType
-    host: Optional[str] = None
-    port: Optional[int] = None
-    database: Optional[str] = None
-    username: Optional[str] = None
-    password: Optional[str] = None
-    connection_string: Optional[str] = None
-    description: Optional[str] = Field(None, max_length=500)
+    host: str | None = None
+    port: int | None = None
+    database: str | None = None
+    username: str | None = None
+    password: str | None = None
+    connection_string: str | None = None
+    description: str | None = Field(None, max_length=500)
 
 
 class DataSourceUpdate(BaseModel):
     """Update data source request"""
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
-    host: Optional[str] = None
-    port: Optional[int] = None
-    database: Optional[str] = None
-    username: Optional[str] = None
-    password: Optional[str] = None
-    connection_string: Optional[str] = None
-    description: Optional[str] = Field(None, max_length=500)
+    name: str | None = Field(None, min_length=1, max_length=100)
+    host: str | None = None
+    port: int | None = None
+    database: str | None = None
+    username: str | None = None
+    password: str | None = None
+    connection_string: str | None = None
+    description: str | None = Field(None, max_length=500)
 
 
 class DataSourceResponse(BaseModel):
@@ -104,18 +103,18 @@ class DataSourceResponse(BaseModel):
     name: str
     type: DataSourceType
     status: DataSourceStatus
-    host: Optional[str] = None
-    port: Optional[int] = None
-    database: Optional[str] = None
-    username: Optional[str] = None
-    connection_string: Optional[str] = None
-    description: Optional[str] = None
-    tables_count: Optional[int] = None
-    size: Optional[str] = None
-    last_connected: Optional[datetime] = None
+    host: str | None = None
+    port: int | None = None
+    database: str | None = None
+    username: str | None = None
+    connection_string: str | None = None
+    description: str | None = None
+    tables_count: int | None = None
+    size: str | None = None
+    last_connected: datetime | None = None
     created_at: datetime
-    updated_at: Optional[datetime] = None
-    tables: Optional[list[TableInfo]] = None
+    updated_at: datetime | None = None
+    tables: list[TableInfo] | None = None
     
     class Config:
         from_attributes = True

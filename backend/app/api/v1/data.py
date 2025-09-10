@@ -2,29 +2,25 @@
 Data connectivity API endpoints
 """
 
-from typing import Any, List
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db as get_async_db
 from app.database import get_db as get_sync_db
-from app.services.data_source_service import DataSourceService
 from app.models.schemas.data import (
+    ConnectionTestResponse,
     DataSourceCreate,
     DataSourceResponse,
-    DataSourceUpdate,
     DataSourceType,
-    DataSourceStatus,
-    ConnectionTestResponse,
-    TableInfo,
+    DataSourceUpdate,
 )
+from app.services.data_source_service import DataSourceService
 
 router = APIRouter()
 
 
-@router.get("/sources", response_model=List[DataSourceResponse])
+@router.get("/sources", response_model=list[DataSourceResponse])
 async def list_data_sources(
     db: Session = Depends(get_sync_db),
     skip: int = 0,
@@ -94,7 +90,7 @@ async def create_data_source(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to create data source: {str(e)}",
+            detail=f"Failed to create data source: {e!s}",
         )
 
 
@@ -120,7 +116,7 @@ async def test_connection(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Connection test failed: {str(e)}",
+            detail=f"Connection test failed: {e!s}",
         )
 
 
@@ -215,7 +211,7 @@ async def update_data_source(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to update data source: {str(e)}",
+            detail=f"Failed to update data source: {e!s}",
         )
 
 
@@ -248,5 +244,5 @@ async def delete_data_source(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete data source: {str(e)}",
+            detail=f"Failed to delete data source: {e!s}",
         )

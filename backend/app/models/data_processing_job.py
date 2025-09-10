@@ -2,12 +2,18 @@
 Data processing job model for tracking async data processing tasks
 """
 
-from datetime import datetime
 from uuid import uuid4
 
 from sqlalchemy import (
-    Column, DateTime, ForeignKey, 
-    Integer, JSON, String, Text, Float, Index
+    JSON,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -95,11 +101,11 @@ class DataProcessingJob(Base):
     
     # Indexes for performance
     __table_args__ = (
-        Index('idx_job_status_priority', 'status', 'priority'),
-        Index('idx_job_user_status', 'user_id', 'status'),
-        Index('idx_job_source_status', 'data_source_id', 'status'),
-        Index('idx_job_created_status', 'created_at', 'status'),
-        Index('idx_job_type_status', 'job_type', 'status'),
+        Index("idx_job_status_priority", "status", "priority"),
+        Index("idx_job_user_status", "user_id", "status"),
+        Index("idx_job_source_status", "data_source_id", "status"),
+        Index("idx_job_created_status", "created_at", "status"),
+        Index("idx_job_type_status", "job_type", "status"),
     )
     
     def __repr__(self) -> str:

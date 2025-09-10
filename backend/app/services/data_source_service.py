@@ -1,25 +1,30 @@
-from typing import List, Optional, Dict, Any
-from sqlalchemy.orm import Session
-from sqlalchemy import text
+import sqlite3
+from datetime import datetime
+from typing import Any
+
 import psycopg2
 import pymysql
 import requests
-import sqlite3
-from datetime import datetime
+from sqlalchemy.orm import Session
 
-from app.models.data_source import DataSource, DataSourceType, ConnectionStatus
-from app.models.schemas.data import DataSourceCreate, DataSourceUpdate, TableInfo, ConnectionTestResponse
+from app.models.data_source import ConnectionStatus, DataSource, DataSourceType
+from app.models.schemas.data import (
+    ConnectionTestResponse,
+    DataSourceCreate,
+    DataSourceUpdate,
+    TableInfo,
+)
 
 
 class DataSourceService:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_data_sources(self, skip: int = 0, limit: int = 100) -> List[DataSource]:
+    def get_data_sources(self, skip: int = 0, limit: int = 100) -> list[DataSource]:
         """Get all data sources with pagination"""
         return self.db.query(DataSource).offset(skip).limit(limit).all()
 
-    def get_data_source(self, data_source_id: int) -> Optional[DataSource]:
+    def get_data_source(self, data_source_id: int) -> DataSource | None:
         """Get a specific data source by ID"""
         return self.db.query(DataSource).filter(DataSource.id == data_source_id).first()
 
@@ -29,8 +34,8 @@ class DataSourceService:
         data = data_source.dict()
         
         # Map the string type to enum
-        if 'type' in data:
-            data['type'] = DataSourceType(data['type'])
+        if "type" in data:
+            data["type"] = DataSourceType(data["type"])
         
         db_data_source = DataSource(**data)
         self.db.add(db_data_source)
@@ -38,7 +43,7 @@ class DataSourceService:
         self.db.refresh(db_data_source)
         return db_data_source
 
-    def update_data_source(self, data_source_id: int, data_source: DataSourceUpdate) -> Optional[DataSource]:
+    def update_data_source(self, data_source_id: int, data_source: DataSourceUpdate) -> DataSource | None:
         """Update an existing data source"""
         db_data_source = self.get_data_source(data_source_id)
         if not db_data_source:
@@ -92,28 +97,27 @@ class DataSourceService:
             self.db.commit()
             return ConnectionTestResponse(
                 success=False,
-                message=f"Connection test failed: {str(e)}"
+                message=f"Connection test failed: {e!s}"
             )
 
     def _test_connection_by_type(self, data_source: DataSource) -> ConnectionTestResponse:
         """Test connection based on data source type"""
         if data_source.type == DataSourceType.postgresql:
             return self._test_postgresql(data_source)
-        elif data_source.type == DataSourceType.mysql:
+        if data_source.type == DataSourceType.mysql:
             return self._test_mysql(data_source)
-        elif data_source.type == DataSourceType.sqlite:
+        if data_source.type == DataSourceType.sqlite:
             return self._test_sqlite(data_source)
-        elif data_source.type == DataSourceType.rest_api:
+        if data_source.type == DataSourceType.rest_api:
             return self._test_rest_api(data_source)
-        elif data_source.type in [DataSourceType.bigquery, DataSourceType.snowflake]:
+        if data_source.type in [DataSourceType.bigquery, DataSourceType.snowflake]:
             return self._test_cloud_database(data_source)
-        elif data_source.type == DataSourceType.google_sheets:
+        if data_source.type == DataSourceType.google_sheets:
             return self._test_google_sheets(data_source)
-        else:
-            return ConnectionTestResponse(
-                success=False,
-                message=f"Connection testing not implemented for {data_source.type}"
-            )
+        return ConnectionTestResponse(
+            success=False,
+            message=f"Connection testing not implemented for {data_source.type}"
+        )
 
     def _test_postgresql(self, data_source: DataSource) -> ConnectionTestResponse:
         """Test PostgreSQL connection"""
@@ -176,7 +180,7 @@ class DataSourceService:
         except Exception as e:
             return ConnectionTestResponse(
                 success=False,
-                message=f"PostgreSQL connection failed: {str(e)}"
+                message=f"PostgreSQL connection failed: {e!s}"
             )
 
     def _test_mysql(self, data_source: DataSource) -> ConnectionTestResponse:
@@ -240,7 +244,7 @@ class DataSourceService:
         except Exception as e:
             return ConnectionTestResponse(
                 success=False,
-                message=f"MySQL connection failed: {str(e)}"
+                message=f"MySQL connection failed: {e!s}"
             )
 
     def _test_sqlite(self, data_source: DataSource) -> ConnectionTestResponse:
@@ -286,7 +290,7 @@ class DataSourceService:
         except Exception as e:
             return ConnectionTestResponse(
                 success=False,
-                message=f"SQLite connection failed: {str(e)}"
+                message=f"SQLite connection failed: {e!s}"
             )
 
     def _test_rest_api(self, data_source: DataSource) -> ConnectionTestResponse:
@@ -302,15 +306,14 @@ class DataSourceService:
                     tables_count=1,
                     size="N/A"
                 )
-            else:
-                return ConnectionTestResponse(
-                    success=False,
-                    message=f"REST API returned status code: {response.status_code}"
-                )
+            return ConnectionTestResponse(
+                success=False,
+                message=f"REST API returned status code: {response.status_code}"
+            )
         except Exception as e:
             return ConnectionTestResponse(
                 success=False,
-                message=f"REST API connection failed: {str(e)}"
+                message=f"REST API connection failed: {e!s}"
             )
 
     def _test_cloud_database(self, data_source: DataSource) -> ConnectionTestResponse:
@@ -341,18 +344,17 @@ class DataSourceService:
                         TableInfo(name="Sheet3", rows=75, size="0.2 MB")
                     ]
                 )
-            else:
-                return ConnectionTestResponse(
-                    success=False,
-                    message="Invalid Google Sheets URL"
-                )
+            return ConnectionTestResponse(
+                success=False,
+                message="Invalid Google Sheets URL"
+            )
         except Exception as e:
             return ConnectionTestResponse(
                 success=False,
-                message=f"Google Sheets connection failed: {str(e)}"
+                message=f"Google Sheets connection failed: {e!s}"
             )
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get data source statistics"""
         total = self.db.query(DataSource).count()
         connected = self.db.query(DataSource).filter(DataSource.status == ConnectionStatus.connected).count()

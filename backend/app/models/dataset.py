@@ -6,8 +6,15 @@ from datetime import datetime
 from uuid import uuid4
 
 from sqlalchemy import (
-    Boolean, Column, DateTime, ForeignKey, 
-    Integer, JSON, String, Float, Index
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -78,9 +85,9 @@ class Dataset(Base):
     
     # Indexes for performance
     __table_args__ = (
-        Index('idx_dataset_source_current', 'data_source_id', 'is_current'),
-        Index('idx_dataset_user_current', 'user_id', 'is_current'),
-        Index('idx_dataset_version', 'data_source_id', 'version'),
+        Index("idx_dataset_source_current", "data_source_id", "is_current"),
+        Index("idx_dataset_user_current", "user_id", "is_current"),
+        Index("idx_dataset_version", "data_source_id", "version"),
     )
     
     def __repr__(self) -> str:

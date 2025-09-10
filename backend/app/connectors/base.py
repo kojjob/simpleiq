@@ -2,17 +2,16 @@
 Base connector class for all data source connectors
 """
 
-from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Tuple
-from uuid import UUID
 import logging
+import re
+from abc import ABC, abstractmethod
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.data_source import DataSource, ConnectionStatus
-from app.models.dataset import Dataset
 from app.models.data_processing_job import DataProcessingJob
+from app.models.data_source import ConnectionStatus, DataSource
 
 logger = logging.getLogger(__name__)
 
@@ -36,32 +35,30 @@ class BaseConnector(ABC):
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
     
     @abstractmethod
-    async def validate_connection(self) -> Tuple[bool, Optional[str]]:
+    async def validate_connection(self) -> tuple[bool, str | None]:
         """
         Validate connection to the data source
         
         Returns:
             Tuple of (success, error_message)
         """
-        pass
     
     @abstractmethod
-    async def fetch_schema(self) -> Dict[str, Any]:
+    async def fetch_schema(self) -> dict[str, Any]:
         """
         Fetch schema information from the data source
         
         Returns:
             Dictionary containing schema information
         """
-        pass
     
     @abstractmethod
     async def fetch_data(
         self, 
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
-        filters: Optional[Dict[str, Any]] = None
-    ) -> List[Dict[str, Any]]:
+        limit: int | None = None,
+        offset: int | None = None,
+        filters: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
         """
         Fetch data from the source
         
@@ -73,7 +70,6 @@ class BaseConnector(ABC):
         Returns:
             List of dictionaries representing rows
         """
-        pass
     
     @abstractmethod
     async def count_rows(self) -> int:
@@ -83,10 +79,9 @@ class BaseConnector(ABC):
         Returns:
             Total row count
         """
-        pass
     
     @abstractmethod
-    async def validate_data(self, data: List[Dict[str, Any]]) -> Tuple[bool, List[str]]:
+    async def validate_data(self, data: list[dict[str, Any]]) -> tuple[bool, list[str]]:
         """
         Validate data quality and integrity
         
@@ -96,12 +91,11 @@ class BaseConnector(ABC):
         Returns:
             Tuple of (is_valid, list_of_errors)
         """
-        pass
     
     async def update_connection_status(
         self, 
         status: ConnectionStatus, 
-        error_message: Optional[str] = None
+        error_message: str | None = None
     ) -> None:
         """
         Update connection status in database
@@ -114,7 +108,7 @@ class BaseConnector(ABC):
         if error_message:
             self.data_source.error_message = error_message
             self.data_source.error_count += 1
-            self.data_source.last_error_at = datetime.utcnow()
+            self.data_source.last_error_at = datetime.now(datetime.UTC)
         
         await self.db_session.commit()
         self.logger.info(f"Updated connection status to {status} for data source {self.data_source.id}")
@@ -158,16 +152,16 @@ class BaseConnector(ABC):
             Database type string
         """
         type_map = {
-            'int64': 'INTEGER',
-            'float64': 'FLOAT',
-            'object': 'VARCHAR',
-            'bool': 'BOOLEAN',
-            'datetime64': 'TIMESTAMP',
-            'datetime64[ns]': 'TIMESTAMP',
-            'timedelta64': 'INTERVAL',
-            'category': 'VARCHAR'
+            "int64": "INTEGER",
+            "float64": "FLOAT",
+            "object": "VARCHAR",
+            "bool": "BOOLEAN",
+            "datetime64": "TIMESTAMP",
+            "datetime64[ns]": "TIMESTAMP",
+            "timedelta64": "INTERVAL",
+            "category": "VARCHAR"
         }
-        return type_map.get(str(pandas_dtype), 'VARCHAR')
+        return type_map.get(str(pandas_dtype), "VARCHAR")
     
     def sanitize_column_name(self, name: str) -> str:
         """
@@ -180,8 +174,7 @@ class BaseConnector(ABC):
             Sanitized column name
         """
         # Replace spaces and special characters with underscores
-        import re
-        sanitized = re.sub(r'[^a-zA-Z0-9_]', '_', name)
+        sanitized = re.sub(r"[^a-zA-Z0-9_]", "_", name)
         # Ensure it doesn't start with a number
         if sanitized and sanitized[0].isdigit():
             sanitized = f"col_{sanitized}"

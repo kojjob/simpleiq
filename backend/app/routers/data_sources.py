@@ -1,22 +1,22 @@
-from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.schemas.data_source import (
-    DataSourceCreate,
-    DataSourceUpdate,
-    DataSourceResponse,
-    DataSourceWithTables,
     ConnectionTestResponse,
-    DataSourceStats
+    DataSourceCreate,
+    DataSourceResponse,
+    DataSourceStats,
+    DataSourceUpdate,
+    DataSourceWithTables,
 )
 from app.services.data_source_service import DataSourceService
 
 router = APIRouter(prefix="/api/data-sources", tags=["data-sources"])
 
 
-@router.get("/", response_model=List[DataSourceResponse])
+@router.get("/", response_model=list[DataSourceResponse])
 async def get_data_sources(
     skip: int = 0,
     limit: int = 100,
@@ -136,8 +136,7 @@ async def get_data_source_tables(
             "tables_count": result.tables_count,
             "size": result.size
         }
-    else:
-        raise HTTPException(status_code=400, detail=f"Cannot retrieve tables: {result.message}")
+    raise HTTPException(status_code=400, detail=f"Cannot retrieve tables: {result.message}")
 
 
 @router.post("/{data_source_id}/sync")
@@ -156,8 +155,7 @@ async def sync_data_source(
             "size": result.size,
             "status": "connected"
         }
-    else:
-        return {
-            "message": f"Sync failed: {result.message}",
-            "status": "error"
-        }
+    return {
+        "message": f"Sync failed: {result.message}",
+        "status": "error"
+    }

@@ -1,34 +1,35 @@
-from pydantic import BaseModel, Field
-from typing import Optional, List
 from datetime import datetime
-from app.models.data_source import DataSourceType, ConnectionStatus
+
+from pydantic import BaseModel, Field
+
+from app.models.data_source import ConnectionStatus, DataSourceType
 
 
 class DataSourceBase(BaseModel):
     name: str = Field(..., description="Name of the data source")
     type: DataSourceType = Field(..., description="Type of data source")
-    host: Optional[str] = Field(None, description="Database host")
-    port: Optional[int] = Field(None, description="Database port")
-    database: Optional[str] = Field(None, description="Database name")
-    username: Optional[str] = Field(None, description="Username for authentication")
-    connection_string: Optional[str] = Field(None, description="Connection string or URL")
-    description: Optional[str] = Field(None, description="Description of the data source")
+    host: str | None = Field(None, description="Database host")
+    port: int | None = Field(None, description="Database port")
+    database: str | None = Field(None, description="Database name")
+    username: str | None = Field(None, description="Username for authentication")
+    connection_string: str | None = Field(None, description="Connection string or URL")
+    description: str | None = Field(None, description="Description of the data source")
 
 
 class DataSourceCreate(DataSourceBase):
-    password: Optional[str] = Field(None, description="Password for authentication")
+    password: str | None = Field(None, description="Password for authentication")
 
 
 class DataSourceUpdate(BaseModel):
-    name: Optional[str] = None
-    type: Optional[DataSourceType] = None
-    host: Optional[str] = None
-    port: Optional[int] = None
-    database: Optional[str] = None
-    username: Optional[str] = None
-    password: Optional[str] = None
-    connection_string: Optional[str] = None
-    description: Optional[str] = None
+    name: str | None = None
+    type: DataSourceType | None = None
+    host: str | None = None
+    port: int | None = None
+    database: str | None = None
+    username: str | None = None
+    password: str | None = None
+    connection_string: str | None = None
+    description: str | None = None
 
 
 class TableInfo(BaseModel):
@@ -41,18 +42,18 @@ class DataSourceResponse(DataSourceBase):
     id: int
     status: ConnectionStatus
     tables_count: int = 0
-    size: Optional[str] = None
+    size: str | None = None
     created_at: datetime
     updated_at: datetime
-    last_connected: Optional[datetime] = None
-    user_id: Optional[int] = None
+    last_connected: datetime | None = None
+    user_id: int | None = None
 
     class Config:
         from_attributes = True
 
 
 class DataSourceWithTables(DataSourceResponse):
-    tables: List[TableInfo] = []
+    tables: list[TableInfo] = []
 
 
 class ConnectionTestRequest(BaseModel):
@@ -62,9 +63,9 @@ class ConnectionTestRequest(BaseModel):
 class ConnectionTestResponse(BaseModel):
     success: bool
     message: str
-    tables_count: Optional[int] = None
-    size: Optional[str] = None
-    tables: List[TableInfo] = []
+    tables_count: int | None = None
+    size: str | None = None
+    tables: list[TableInfo] = []
 
 
 class DataSourceStats(BaseModel):

@@ -2,20 +2,21 @@
 FastAPI application entry point for SimpleIQ Backend
 """
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any, AsyncGenerator
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
-from app.api.v1 import auth, data, queries, dashboards, data_sources
-from app.core.config import settings
-from app.core.database import create_db_tables
 # Import models to register them with SQLAlchemy
 import app.models
+from app.api.v1 import auth, dashboards, data, data_sources, queries
+from app.core.config import settings
+from app.core.database import create_db_tables
 
 
 @asynccontextmanager
@@ -48,7 +49,7 @@ app = FastAPI(
 )
 
 # Add middleware
-cors_origins = [str(origin).rstrip('/') for origin in settings.BACKEND_CORS_ORIGINS]
+cors_origins = [str(origin).rstrip("/") for origin in settings.BACKEND_CORS_ORIGINS]
 print(f"CORS Origins configured: {cors_origins}")
 app.add_middleware(
     CORSMiddleware,

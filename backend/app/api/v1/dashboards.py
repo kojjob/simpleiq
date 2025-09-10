@@ -2,24 +2,24 @@
 Dashboard management API endpoints
 """
 
-from typing import Any, List
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.models.schemas.dashboard import (
+    ChartType,
     DashboardCreate,
     DashboardResponse,
     DashboardUpdate,
     WidgetCreate,
-    ChartType,
 )
 
 router = APIRouter()
 
 
-@router.get("/", response_model=List[DashboardResponse])
+@router.get("/", response_model=list[DashboardResponse])
 async def list_dashboards(
     db: AsyncSession = Depends(get_db),
     skip: int = 0,
